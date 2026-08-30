@@ -1,0 +1,107 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:9.3.0'
+    }
+}
+
+apply plugin: 'com.android.application'
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'org.hamcrest:hamcrest:2.2'
+    androidTestImplementation 'org.hamcrest:hamcrest-core:2.2'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}
+
+android {
+    compileSdk = 34
+    ndkVersion = "29.0.14206865"
+    namespace = "com.reecedunn.espeak"
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    defaultConfig {
+        applicationId = "com.pates2004.mespeak.x32"
+        minSdk = 21
+        targetSdk = 34
+        versionCode = 21
+        versionName = "1.44.05-r21"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters += ["armeabi-v7a", "x86"]
+        }
+
+        externalNativeBuild {
+            cmake {
+                arguments.addAll(["-DUSE_ASYNC:BOOL=OFF", "-DUSE_MBROLA:BOOL=OFF"])
+                targets.addAll(["ttsespeak"])
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = "jni/CMakeLists.txt"
+            version = "3.22.1"
+        }
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile('AndroidManifest.xml')
+            java.srcDirs = ['src']
+            res.srcDirs = ['res']
+        }
+        androidTest {
+            java.srcDirs = ['eSpeakTests/src']
+            res.srcDirs = ['eSpeakTests/res']
+        }
+    }
+
+    lint {
+        abortOnError = false
+    }
+}
+
+tasks.register('createDataArchive', Zip) {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    archiveFileName = "espeakdata.zip"
+    destinationDirectory = file("res/raw")
+
+    from("engine/espeak-data/") {
+        into "espeak-ng-data"
+    }
+}
+
+tasks.register('createDataVersion') {
+    dependsOn tasks.createDataArchive
+    doLast {
+        // Keep the marker identical to the legacy data/version file so the
+        // framework does not reinstall the bundled data on every check.
+        file("res/raw/espeakdata_version").text = file("engine/espeak-data/version").text
+    }
+}
+
+tasks.whenTaskAdded { task ->
+    if (task.name == 'assembleDebug' || task.name == 'assembleRelease') {
+        task.dependsOn createDataVersion
+    }
+}
+
+tasks.named('preBuild') { dependsOn 'createDataVersion' }

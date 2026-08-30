@@ -1,0 +1,10 @@
+/.cxx/
+/.gradle/
+/build/
+/res/raw/espeakdata.zip
+/res/raw/espeakdata_version
+/local.properties
+*.apk
+*.aab
+*.jks
+*.keystore
