@@ -31,6 +31,7 @@
 #include <jni.h>
 
 #include "speak_lib.h"
+#include "sonic.h"
 #include <Log.h>
 
 #define BUFFER_SIZE_IN_MILLISECONDS 300
@@ -104,6 +105,15 @@ jmethodID METHOD_nativeSynthWordCallback;
  * Reset by nativeSynthesize before each espeak_Synth call. */
 static int frames_delivered = 0;
 
+/* Optional post-synthesis time compression. The legacy eSpeak core clamps
+ * its rate at 450 WPM; when the Java setting requests more, Sonic shortens
+ * the generated PCM while preserving pitch. The stream is created lazily so
+ * the normal path remains byte-for-byte unchanged. */
+static float sonic_speed = 1.0f;
+static sonicStream sonic_stream = NULL;
+static int sonic_sample_rate = 22050;
+static atomic_int sonic_failed;
+
 /* Set by nativeStop from the framework's control thread while espeak_Synth is
  * still running on the synthesis thread.  espeak_ng_Cancel() cannot interrupt a
  * synthesis in progress -- its body is entirely #if USE_ASYNC, which this build
@@ -118,6 +128,42 @@ static JNIEnv *getJniEnv() {
   return env;
 }
 
+static void sonic_destroy_stream(void) {
+  if (sonic_stream != NULL) {
+    sonicDestroyStream(sonic_stream);
+    sonic_stream = NULL;
+  }
+}
+
+static int deliver_audio(JNIEnv *env, jobject object, short *samples, int count) {
+  if (count <= 0) return 1;
+  jbyteArray arrayAudioData = (*env)->NewByteArray(env, count * 2);
+  if (arrayAudioData == NULL) return 0;
+  (*env)->SetByteArrayRegion(env, arrayAudioData, 0, count * 2,
+                             (jbyte *) samples);
+  (*env)->CallVoidMethod(env, object, METHOD_nativeSynthCallback, arrayAudioData);
+  (*env)->DeleteLocalRef(env, arrayAudioData);
+  frames_delivered += count;
+  return 1;
+}
+
+static int deliver_sonic_output(JNIEnv *env, jobject object, int flush) {
+  if (sonic_stream == NULL) return 1;
+  if (flush && !sonicFlushStream(sonic_stream)) return 0;
+
+  short output[8192];
+  while (sonicSamplesAvailable(sonic_stream) > 0) {
+    int available = sonicSamplesAvailable(sonic_stream);
+    int count = available > (int)(sizeof(output) / sizeof(output[0]))
+                    ? (int)(sizeof(output) / sizeof(output[0]))
+                    : available;
+    int read = sonicReadShortFromStream(sonic_stream, output, count);
+    if (read <= 0) break;
+    if (!deliver_audio(env, object, output, read)) return 0;
+  }
+  return 1;
+}
+
 /* Callback from espeak.  Should call back to the TTS API */
 static int SynthCallback(short *audioData, int numSamples,
                          espeak_EVENT *events) {
@@ -127,6 +173,13 @@ static int SynthCallback(short *audioData, int numSamples,
   /* espeak marks the end of the request with a NULL buffer, not with a zero
    * sample count -- an empty buffer can legitimately occur mid-stream. */
   if (audioData == NULL || atomic_load(&stop_requested)) {
+    if (audioData == NULL && !atomic_load(&stop_requested)
+        && sonic_speed > 1.0f && !atomic_load(&sonic_failed)) {
+      if (!deliver_sonic_output(env, object, 1)) {
+        atomic_store(&sonic_failed, 1);
+      }
+    }
+    sonic_destroy_stream();
     /* Report completion either way: espeak returns ENS_SPEECH_STOPPED without
      * a final NULL-buffer callback when aborted, so this is the only place the
      * Java side hears that the request is over and can call done(). */
@@ -145,6 +198,9 @@ static int SynthCallback(short *audioData, int numSamples,
      * past the audio actually produced.  Clamping to the current buffer keeps
      * it exact while sonic is idle and bounded by one buffer when it is not. */
     int marker = event->sample;
+    if (sonic_speed > 1.0f) {
+      marker = (int)((float) marker / sonic_speed);
+    }
     if (marker < frames_delivered)
       marker = frames_delivered;
     else if (marker > frames_delivered + numSamples)
@@ -156,13 +212,29 @@ static int SynthCallback(short *audioData, int numSamples,
   }
 
   if (numSamples > 0) {
-    jbyteArray arrayAudioData = (*env)->NewByteArray(env, numSamples * 2);
-    (*env)->SetByteArrayRegion(env, arrayAudioData, 0, (numSamples * 2), (jbyte *) audioData);
-    (*env)->CallVoidMethod(env, object, METHOD_nativeSynthCallback, arrayAudioData);
-    /* The callback runs many times per request without returning to Java, so
-     * the local reference has to be released here or the table overflows. */
-    (*env)->DeleteLocalRef(env, arrayAudioData);
-    frames_delivered += numSamples;
+    if (sonic_speed > 1.0f && !atomic_load(&sonic_failed)) {
+      if (sonic_stream == NULL) {
+        sonic_stream = sonicCreateStream(sonic_sample_rate, 1);
+        if (sonic_stream == NULL) {
+          atomic_store(&sonic_failed, 1);
+        } else {
+          sonicSetSpeed(sonic_stream, sonic_speed);
+        }
+      }
+      if (!atomic_load(&sonic_failed)) {
+        if (!sonicWriteShortToStream(sonic_stream, audioData, numSamples)
+            || !deliver_sonic_output(env, object, 0)) {
+          atomic_store(&sonic_failed, 1);
+          sonic_destroy_stream();
+        }
+      }
+    }
+    if (sonic_speed <= 1.0f || atomic_load(&sonic_failed)) {
+      if (!deliver_audio(env, object, audioData, numSamples)) {
+        atomic_store(&stop_requested, 1);
+        return SYNTH_ABORT;
+      }
+    }
   }
 
   return SYNTH_CONTINUE;
@@ -204,6 +276,7 @@ JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeCreate(
 
   if (DEBUG) LOGV("Initializing with path %s", c_path);
   int sampleRate = espeak_Initialize(AUDIO_OUTPUT_SYNCHRONOUS, BUFFER_SIZE_IN_MILLISECONDS, c_path, 0);
+  if (sampleRate > 0) sonic_sample_rate = sampleRate;
 
   if (c_path) (*env)->ReleaseStringUTFChars(env, path, c_path);
 
@@ -359,6 +432,8 @@ JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSynthesize(
 
   espeak_SetSynthCallback(SynthCallback);
   frames_delivered = 0;
+  sonic_destroy_stream();
+  atomic_store(&sonic_failed, 0);
   atomic_store(&stop_requested, 0);
   const espeak_ERROR result = espeak_Synth(c_text, strlen(c_text), 0,  // position
                POS_CHARACTER, 0, // end position (0 means no end position)
@@ -376,6 +451,15 @@ JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSynthesize(
     case EE_NOT_FOUND:      LOGE("espeak_Synth: not found."); break;
   }
 
+  return JNI_TRUE;
+}
+
+JNIEXPORT jboolean
+JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSetSonicSpeed(
+    JNIEnv *env, jobject object, jfloat speed) {
+  if (speed < 1.0f) speed = 1.0f;
+  if (speed > 3.0f) speed = 3.0f;
+  sonic_speed = speed;
   return JNI_TRUE;
 }
 

@@ -19,7 +19,7 @@
         Source: Checkbox label.
         Description: When enabled, triples the selected speech rate.
     -->
-  <string name="setting_rate_boost">Rate boost (3x)</string>
+  <string name="setting_rate_boost">Additional speed boost (up to 3x)</string>
   <!--
         Source: Dialog text.
         Description: Status message shown when installing voice data.

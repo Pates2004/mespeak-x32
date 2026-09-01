@@ -259,6 +259,14 @@ public class SpeechSynthesis {
         nativeSynthesize(text, isSsml);
     }
 
+    /**
+     * Sets the optional post-synthesis time compression used for the rate
+     * boost setting. A value of 1 disables compression.
+     */
+    public void setSonicSpeed(float speed) {
+        nativeSetSonicSpeed(speed);
+    }
+
     public void stop() {
         nativeStop();
     }
@@ -334,6 +342,8 @@ public class SpeechSynthesis {
     private native final boolean nativeSetPunctuationCharacters(String characters);
 
     private native final boolean nativeSynthesize(String text, boolean isSsml);
+
+    private native final boolean nativeSetSonicSpeed(float speed);
 
     private native final boolean nativeStop();
 

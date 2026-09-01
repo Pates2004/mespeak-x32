@@ -77,8 +77,8 @@ public class VoiceSettings {
         }
 
         if (isRateBoostEnabled()) {
-            // Allow values beyond the normal espeakRATE_MAXIMUM so the native
-            // engine can engage its Sonic fast path for very high rates.
+            // Allow values beyond the normal espeakRATE_MAXIMUM; the JNI
+            // layer applies Sonic time compression to the clamped PCM.
             rate = rate * RATE_BOOST_MULTIPLIER;
             int boostedMax = max * RATE_BOOST_MULTIPLIER; // keep within a sensible upper bound
             if (rate > boostedMax) rate = boostedMax;

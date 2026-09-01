@@ -2,6 +2,15 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project(mespeak-android LANGUAGES C CXX)
 
+# libsonic is built into the JNI library so the optional rate boost works on
+# every supported Android ABI without relying on a device-specific audio API.
+include(FetchContent)
+FetchContent_Declare(sonic-git
+    GIT_REPOSITORY https://github.com/waywardgeek/sonic.git
+    GIT_TAG fbf75c3d6d846bad3bb3d456cbc5d07d9fd8c104
+)
+FetchContent_MakeAvailable(sonic-git)
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -37,12 +46,14 @@ set(ENGINE_SOURCES
 
 add_library(ttsespeak SHARED
     jni/eSpeakService.c
+    ${sonic-git_SOURCE_DIR}/sonic.c
     ${ENGINE_SOURCES}
 )
 
 target_include_directories(ttsespeak PRIVATE
     ${ENGINE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${sonic-git_SOURCE_DIR}
 )
 
 target_compile_definitions(ttsespeak PRIVATE
