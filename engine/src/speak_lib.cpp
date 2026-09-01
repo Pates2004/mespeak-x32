@@ -1150,9 +1150,9 @@ ESPEAK_API espeak_ERROR espeak_SetParameter(espeak_PARAMETER parameter, int valu
 }
 
 
-ESPEAK_API void espeak_SetSonicRate(int value)
+ESPEAK_API int espeak_SetSonicRate(int value)
 {//============================================
-	SetSonicRate(value);
+	return SetSonicRate(value);
 }
 
 

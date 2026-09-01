@@ -458,8 +458,8 @@ JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSetSonicRate(
     JNIEnv *env, jobject object, jint rate) {
   if (rate > espeakRATE_MAXIMUM) {
     if (rate > espeakRATE_MAXIMUM * 3) rate = espeakRATE_MAXIMUM * 3;
-    sonic_speed = (float) rate / (float) espeakRATE_NORMAL;
-    espeak_SetSonicRate((int) rate);
+    int adjusted_rate = espeak_SetSonicRate((int) rate);
+    sonic_speed = (float) adjusted_rate / (float) espeakRATE_NORMAL;
   } else {
     sonic_speed = 1.0f;
     espeak_SetSonicRate(0);

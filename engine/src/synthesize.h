@@ -364,6 +364,7 @@ typedef struct {
 	int wav_factor;
 	int lenmod_factor;
 	int lenmod2_factor;
+	int min_pause;
 	int min_sample_len;
 	int loud_consonants;
 	int fast_settings[8];
@@ -506,7 +507,7 @@ int  SynthOnTimer(void);
 int  SpeakNextClause(FILE *f_text, const void *text_in, int control);
 int  SynthStatus(void);
 void SetSpeed(int control);
-void SetSonicRate(int value);
+int SetSonicRate(int value);
 void SetEmbedded(int control, int value);
 void SelectPhonemeTable(int number);
 int  SelectPhonemeTableName(const char *name);

@@ -425,7 +425,7 @@ espeak_ERROR espeak_SetParameter(espeak_PARAMETER parameter, int value, int rela
 #ifdef __cplusplus
 extern "C"
 #endif
-void espeak_SetSonicRate(int value);
+int espeak_SetSonicRate(int value);
 /* Internal companion for clients which apply Sonic after synthesis.
    Values above espeakRATE_MAXIMUM select clarity-oriented articulation;
    zero or a normal eSpeak rate disables that mode. */

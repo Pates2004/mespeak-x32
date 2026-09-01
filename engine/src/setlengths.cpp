@@ -134,10 +134,14 @@ static int speed3 = 118;
 static int sonic_rate = 0;
 
 
-void SetSonicRate(int value)
+int SetSonicRate(int value)
 {//============================
 	sonic_rate = (value > espeakRATE_MAXIMUM) ? value : 0;
+	int adjusted_rate = sonic_rate;
+	if((adjusted_rate > 0) && (voice != NULL) && (voice->speed_percent > 0))
+		adjusted_rate = (adjusted_rate * voice->speed_percent) / 100;
 	SetSpeed(3);
+	return adjusted_rate;
 }
 
 
@@ -152,6 +156,7 @@ void SetSpeed(int control)
 	int wpm2;
 
 	speed.loud_consonants = 0;
+	speed.min_pause = 5;
 	speed.min_sample_len = 450;
 	speed.lenmod_factor = 110;   // controls the effect of FRFLAG_LEN_MOD reduce length change
 	speed.lenmod2_factor = 100;
@@ -189,6 +194,7 @@ void SetSpeed(int control)
 		{
 			speed.pause_factor = 85;
 			speed.clause_pause_factor = espeakRATE_MINIMUM;
+			speed.min_pause = 22;
 			speed.min_sample_len = espeakRATE_MAXIMUM * 2;
 			speed.wav_factor = 211;
 			speed.lenmod_factor = 210;

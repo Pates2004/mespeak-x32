@@ -200,7 +200,7 @@ int PauseLength(int pause, int control)
 	else
 		len = (pause * speed.wav_factor)/256;
 
-	if(len < 5) len = 5;      // mS, limit the amount to which pauses can be shortened
+	if(len < speed.min_pause) len = speed.min_pause; // mS, limit pause shortening
 	return(len);
 }
 
