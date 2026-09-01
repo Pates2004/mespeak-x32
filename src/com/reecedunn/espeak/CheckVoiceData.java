@@ -151,11 +151,14 @@ public class CheckVoiceData extends Activity {
 
         boolean haveBaseResources = hasBaseResources(storageContext);
         if (!haveBaseResources || canUpgradeResources(storageContext)) {
-            if (!haveBaseResources) {
+            // Android may issue CHECK_TTS_DATA before it binds TtsService on a
+            // fresh installation. Install the bundled data here as well so
+            // Settings does not cache an empty language list until reopened.
+            if (!extractVoiceData(storageContext) || !hasBaseResources(storageContext)) {
                 unavailableLanguages.add(Locale.ENGLISH.toString());
+                returnResults(Engine.CHECK_VOICE_DATA_FAIL, availableLanguages, unavailableLanguages);
+                return;
             }
-            returnResults(Engine.CHECK_VOICE_DATA_FAIL, availableLanguages, unavailableLanguages);
-            return;
         }
 
         final SpeechSynthesis engine = new SpeechSynthesis(storageContext, mSynthReadyCallback);

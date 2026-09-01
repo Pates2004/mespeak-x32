@@ -1845,7 +1845,7 @@ static int TranslateWord2(Translator *tr, char *word, WORD_TAB *wtab, int pre_pa
 				if(pre_pause < 1)
 					pre_pause = 1;
 			}
-			if((flags & FLAG_PREPAUSE) && !(word_flags && (FLAG_LAST_WORD | FLAG_FIRST_WORD)) && !(wtab[-1].flags & FLAG_FIRST_WORD) && (tr->prepause_timeout == 0))
+			if((flags & FLAG_PREPAUSE) && !(word_flags & (FLAG_LAST_WORD | FLAG_FIRST_WORD)) && !(wtab[-1].flags & FLAG_FIRST_WORD) && (tr->prepause_timeout == 0))
 			{
 				// the word is marked in the dictionary list with $pause
 				if(pre_pause < 4) pre_pause = 4;
