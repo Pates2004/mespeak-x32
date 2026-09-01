@@ -4,7 +4,7 @@
         Source: Activity title.
         Description: Title for the Settings activity.
     -->
-  <string name="tts_settings_label">mespeak x32 TTS Settings</string>
+  <string name="tts_settings_label">mespeak TTS Settings</string>
   <!--
         Source: Preference title.
         Description: Title for the preference that controls default voice pitch.
@@ -20,6 +20,8 @@
         Description: When enabled, triples the selected speech rate.
     -->
   <string name="setting_rate_boost">Additional speed boost (up to 3x)</string>
+  <string name="show_launcher_title">Show mespeak in the app list</string>
+  <string name="show_launcher_summary">When disabled, mespeak remains available in TTS settings but its launcher icon is hidden.</string>
   <!--
         Source: Dialog text.
         Description: Status message shown when installing voice data.

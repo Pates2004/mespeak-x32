@@ -9,6 +9,9 @@
   <!--Source: Preference title.
         Description: Title for the preference that controls default speech rate.-->
   <string name="setting_default_rate">Prędkość mowy</string>
+  <string name="setting_rate_boost">Dodatkowe przyspieszenie (do 3×)</string>
+  <string name="show_launcher_title">Pokazuj mespeak na liście aplikacji</string>
+  <string name="show_launcher_summary">Po wyłączeniu mespeak pozostanie dostępny w ustawieniach TTS, ale jego ikona zniknie z launchera.</string>
   <!--Source: Dialog text.
         Description: Status message shown when installing voice data.-->
   <string name="installing_voice_data">Instalowanie danych głosowych…</string>
@@ -21,6 +24,12 @@
   <string name="resetToDefault">Ustaw domyślną</string>
   <string name="espeak_pitch_range">Zakres wysokości</string>
   <string name="espeak_variant">Wariant głosu</string>
+  <string name="espeak_supported_languages">Obsługiwane języki</string>
+  <string name="espeak_supported_languages_all">Wszystkie zainstalowane języki są zgłaszane do Androida.</string>
+  <string name="espeak_supported_languages_summary">%1$d z %2$d języków jest zgłaszanych do Androida.</string>
+  <string name="espeak_select_all_languages">Zaznacz wszystkie języki</string>
+  <string name="espeak_deselect_all_languages">Odznacz wszystkie języki</string>
+  <string name="espeak_supported_languages_guard">Wybierz co najmniej jeden język.</string>
   <string name="espeak_speak_punctuation">Interpunkcja mowy</string>
   <string name="punctuation_all">Wszystko</string>
   <string name="punctuation_custom">Własna</string>

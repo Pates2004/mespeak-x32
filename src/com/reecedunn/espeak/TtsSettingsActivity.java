@@ -27,6 +27,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.preference.CheckBoxPreference;
 import android.preference.ListPreference;
 import android.preference.MultiSelectListPreference;
 import android.preference.Preference;
@@ -209,6 +210,29 @@ public class TtsSettingsActivity extends PreferenceActivity {
             pref.setProgress(Integer.parseInt(prefString));
         }
 
+        return pref;
+    }
+
+    private static Preference createLauncherVisibilityPreference(final Context context) {
+        final CheckBoxPreference pref = new CheckBoxPreference(context);
+        pref.setKey(EspeakApp.PREF_SHOW_LAUNCHER);
+        pref.setTitle(R.string.show_launcher_title);
+        pref.setSummary(R.string.show_launcher_summary);
+        pref.setPersistent(true);
+
+        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(storageContext);
+        final boolean visible = prefs.getBoolean(EspeakApp.PREF_SHOW_LAUNCHER, true);
+        if (!prefs.contains(EspeakApp.PREF_SHOW_LAUNCHER)) {
+            prefs.edit().putBoolean(EspeakApp.PREF_SHOW_LAUNCHER, true).apply();
+        }
+        pref.setChecked(visible);
+        EspeakApp.setLauncherVisible(context, visible);
+        pref.setOnPreferenceChangeListener(new OnPreferenceChangeListener() {
+            @Override
+            public boolean onPreferenceChange(Preference preference, Object newValue) {
+                return EspeakApp.setLauncherVisible(context, Boolean.TRUE.equals(newValue));
+            }
+        });
         return pref;
     }
 
@@ -424,6 +448,8 @@ public class TtsSettingsActivity extends PreferenceActivity {
                                        SpeechSynthesis engine, List<Voice> voices,
                                        boolean isWatch) {
         VoiceSettings settings = new VoiceSettings(PreferenceManager.getDefaultSharedPreferences(storageContext), engine);
+
+        group.addPreference(createLauncherVisibilityPreference(context));
 
         // The supported-languages multi-select and the file-picker-driven
         // voice import don't fit on a watch screen and have no meaningful

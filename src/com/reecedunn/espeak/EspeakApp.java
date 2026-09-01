@@ -17,10 +17,13 @@
 package com.reecedunn.espeak;
 
 import android.app.Application;
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.os.Build;
 
 public class EspeakApp extends Application {
+    public static final String PREF_SHOW_LAUNCHER = "show_launcher";
     private static Context storageContext;
 
     public void onCreate() {
@@ -36,5 +39,24 @@ public class EspeakApp extends Application {
 
     public static Context getStorageContext() {
         return EspeakApp.storageContext;
+    }
+
+    /**
+     * Toggles only the launcher alias. The TTS service and its settings entry
+     * remain registered with Android when the application icon is hidden.
+     */
+    public static boolean setLauncherVisible(Context context, boolean visible) {
+        final ComponentName launcher = new ComponentName(
+                context.getPackageName(), EspeakApp.class.getPackage().getName() + ".Launcher");
+        try {
+            context.getPackageManager().setComponentEnabledSetting(
+                    launcher,
+                    visible ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                            : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.DONT_KILL_APP);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 }
