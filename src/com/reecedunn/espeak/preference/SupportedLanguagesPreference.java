@@ -73,6 +73,7 @@ public class SupportedLanguagesPreference extends MultiSelectListPreference {
         mEntryCount = mDialogEntryValues.length;
 
         final Set<String> values = getValues();
+        final boolean allLanguages = values == null || values.isEmpty();
 
         LayoutInflater inflater = LayoutInflater.from(getContext());
         mDialogView = inflater.inflate(R.layout.supported_languages_dialog, null);
@@ -86,7 +87,8 @@ public class SupportedLanguagesPreference extends MultiSelectListPreference {
         mListView.setAdapter(adapter);
 
         for (int i = 0; i < mDialogEntryValues.length; i++) {
-            mListView.setItemChecked(i, values.contains(mDialogEntryValues[i].toString()));
+            mListView.setItemChecked(i,
+                    allLanguages || values.contains(mDialogEntryValues[i].toString()));
         }
 
         mButtonSelectAll = mDialogView.findViewById(R.id.button_select_all);

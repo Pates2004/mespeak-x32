@@ -19,7 +19,9 @@
 package com.reecedunn.espeak;
 
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.util.Log;
@@ -36,6 +38,7 @@ import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceGroup;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 
 import com.reecedunn.espeak.BuildConfig;
 import com.reecedunn.espeak.preference.ImportVoicePreference;
@@ -59,6 +62,7 @@ import java.util.Stack;
 
 public class TtsSettingsActivity extends PreferenceActivity {
 
+    private static final String ACTION_TTS_SETTINGS = "com.android.settings.TTS_SETTINGS";
     private static Context storageContext;
     private static final String TAG = TtsSettingsActivity.class.getSimpleName();
     private static final java.util.HashMap<String, LangInfo> sLangInfo = new java.util.HashMap<String, LangInfo>();
@@ -236,6 +240,33 @@ public class TtsSettingsActivity extends PreferenceActivity {
         return pref;
     }
 
+    private static Preference createSystemTtsSettingsPreference(final Context context) {
+        final Preference pref = new Preference(context);
+        pref.setTitle(R.string.open_system_tts_settings_title);
+        pref.setSummary(R.string.open_system_tts_settings_summary);
+        pref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+            @Override
+            public boolean onPreferenceClick(Preference preference) {
+                try {
+                    context.startActivity(new Intent(ACTION_TTS_SETTINGS));
+                } catch (ActivityNotFoundException e) {
+                    context.startActivity(new Intent(Settings.ACTION_SETTINGS));
+                }
+                return true;
+            }
+        });
+        return pref;
+    }
+
+    private static void addVoiceDataErrorPreferences(Context context, PreferenceGroup group) {
+        group.addPreference(createLauncherVisibilityPreference(context));
+        group.addPreference(createSystemTtsSettingsPreference(context));
+        Preference error = new Preference(context);
+        error.setTitle(R.string.voice_data_unavailable);
+        error.setEnabled(false);
+        group.addPreference(error);
+    }
+
     private static Preference createSupportedLanguagesPreference(Context context, List<Voice> voices) {
         final List<Voice> sortedVoices = new ArrayList<Voice>(voices);
         Collections.sort(sortedVoices, new Comparator<Voice>() {
@@ -398,6 +429,18 @@ public class TtsSettingsActivity extends PreferenceActivity {
                 final boolean isWatch = context.getPackageManager()
                         .hasSystemFeature(PackageManager.FEATURE_WATCH);
 
+                if (!CheckVoiceData.ensureVoiceData(storage)) {
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (!isGone(context)) {
+                                addVoiceDataErrorPreferences(context, group);
+                            }
+                        }
+                    });
+                    return;
+                }
+
                 final SpeechSynthesis engine = new SpeechSynthesis(storage, null);
                 final List<Voice> voices = engine.getAvailableVoices();
 
@@ -450,6 +493,7 @@ public class TtsSettingsActivity extends PreferenceActivity {
         VoiceSettings settings = new VoiceSettings(PreferenceManager.getDefaultSharedPreferences(storageContext), engine);
 
         group.addPreference(createLauncherVisibilityPreference(context));
+        group.addPreference(createSystemTtsSettingsPreference(context));
 
         // The supported-languages multi-select and the file-picker-driven
         // voice import don't fit on a watch screen and have no meaningful

@@ -1,5 +1,5 @@
 language variant
-name female whisper
+name female_whisper
 gender female
 
 pitch 160 220
@@ -21,4 +21,3 @@ stressAdd 0 0 -10 -10 0 0 10 40
 voicing 20
 breath 75 75 50 40 15 10
 breathw 150 150 200 200 400 400
- 

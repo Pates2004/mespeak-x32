@@ -17,7 +17,7 @@
   <string name="variant_anika">Anika</string>
   <string name="variant_anika_robot">Anika Robot</string>
   <string name="variant_annie">Annie</string>
-  <string name="variant_anouncer">Anouncer</string>
+  <string name="variant_anouncer">Announcer</string>
   <string name="variant_antonio">Antonio</string>
   <string name="variant_anxious_andy">Anxious Andy</string>
   <string name="variant_aunty">Aunty</string>
@@ -39,6 +39,7 @@
   <string name="variant_gustave">Gustave</string>
   <string name="variant_henrique">Henrique</string>
   <string name="variant_hugo">Hugo</string>
+  <string name="variant_ian">Ian</string>
   <string name="variant_iven">Iven</string>
   <string name="variant_iven2">Iven 2</string>
   <string name="variant_iven3">Iven 3</string>
@@ -56,6 +57,7 @@
   <string name="variant_michael">Michael</string>
   <string name="variant_michel">Michel</string>
   <string name="variant_mike">Mike</string>
+  <string name="variant_mike2">Mike 2</string>
   <string name="variant_mr_serious">Mr Serious</string>
   <string name="variant_nguyen">Nguyen</string>
   <string name="variant_norbert">Norbert</string>
@@ -63,6 +65,7 @@
   <string name="variant_paul">Paul</string>
   <string name="variant_pedro">Pedro</string>
   <string name="variant_quincy">Quincy</string>
+  <string name="variant_reed">Reed</string>
   <string name="variant_ricishay_max">Ricishay Max</string>
   <string name="variant_ricishay_max2">Ricishay Max 2</string>
   <string name="variant_ricishay_max3">Ricishay Max 3</string>
@@ -87,5 +90,6 @@
   <string name="variant_unirobot">UniRobot</string>
   <string name="variant_victor">Victor</string>
   <string name="variant_zac">Zac</string>
+  <string name="variant_fast">Fast</string>
 
 </resources>

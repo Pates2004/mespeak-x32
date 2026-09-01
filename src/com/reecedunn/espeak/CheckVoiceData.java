@@ -89,7 +89,7 @@ public class CheckVoiceData extends Activity {
         }
     }
 
-    public static boolean extractVoiceData(Context context) {
+    public static synchronized boolean extractVoiceData(Context context) {
         final File dataPath = getDataPath(context);
         FileUtils.rmdir(dataPath);
 
@@ -140,6 +140,14 @@ public class CheckVoiceData extends Activity {
         }
     }
 
+    /** Ensures that bundled voice data is ready before the native engine starts. */
+    public static synchronized boolean ensureVoiceData(Context context) {
+        if (hasBaseResources(context) && !canUpgradeResources(context)) {
+            return true;
+        }
+        return extractVoiceData(context) && hasBaseResources(context);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -149,12 +157,11 @@ public class CheckVoiceData extends Activity {
         ArrayList<String> availableLanguages = new ArrayList<String>();
         ArrayList<String> unavailableLanguages = new ArrayList<String>();
 
-        boolean haveBaseResources = hasBaseResources(storageContext);
-        if (!haveBaseResources || canUpgradeResources(storageContext)) {
+        if (!hasBaseResources(storageContext) || canUpgradeResources(storageContext)) {
             // Android may issue CHECK_TTS_DATA before it binds TtsService on a
             // fresh installation. Install the bundled data here as well so
             // Settings does not cache an empty language list until reopened.
-            if (!extractVoiceData(storageContext) || !hasBaseResources(storageContext)) {
+            if (!ensureVoiceData(storageContext)) {
                 unavailableLanguages.add(Locale.ENGLISH.toString());
                 returnResults(Engine.CHECK_VOICE_DATA_FAIL, availableLanguages, unavailableLanguages);
                 return;

@@ -681,6 +681,9 @@ voice_t *LoadVoice(const char *vname, int control)
 
 	while((f_voice != NULL) && (fgets_strip(buf,sizeof(buf),f_voice) != NULL))
 	{
+		// Newer eSpeak NG variant files also use '#' for comments.
+		if(buf[0] == '#') continue;
+
 		// isolate the attribute name
 		for(p=buf; (*p != 0) && !isspace(*p); p++);
 		*p++ = 0;

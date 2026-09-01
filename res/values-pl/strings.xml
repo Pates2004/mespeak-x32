@@ -48,4 +48,8 @@
   <string name="variant_whisper">Szeptany</string>
   <string name="import_voice_title">Importuj słownik eSpeak</string>
   <string name="import_voice_description">Zaimportuj plik słownika głosowego eSpeak z karty SD.</string>
+  <string name="open_system_tts_settings_title">Przejdź do ustawień zamiany tekstu na mowę</string>
+  <string name="open_system_tts_settings_summary">Wybierz domyślny syntezator i skonfiguruj mowę w systemie Android.</string>
+  <string name="voice_data_unavailable">Nie udało się zainstalować danych głosowych.</string>
+  <string name="variant_other">Inne</string>
 </resources>

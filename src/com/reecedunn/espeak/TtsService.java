@@ -96,10 +96,7 @@ public class TtsService extends TextToSpeechService {
             storageContext.moveSharedPreferencesFrom(this, this.getPackageName() + "_preferences");
         mPreferences = PreferenceManager.getDefaultSharedPreferences(storageContext);
         mPreferences.registerOnSharedPreferenceChangeListener(mOnPreferencesChanged);
-        if (!CheckVoiceData.hasBaseResources(storageContext)
-                || CheckVoiceData.canUpgradeResources(storageContext)) {
-            CheckVoiceData.extractVoiceData(storageContext);
-        }
+        CheckVoiceData.ensureVoiceData(storageContext);
         initializeTtsEngine();
         super.onCreate();
     }

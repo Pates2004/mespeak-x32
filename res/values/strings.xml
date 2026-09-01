@@ -22,6 +22,9 @@
   <string name="setting_rate_boost">Additional speed boost (up to 3x)</string>
   <string name="show_launcher_title">Show mespeak in the app list</string>
   <string name="show_launcher_summary">When disabled, mespeak remains available in TTS settings but its launcher icon is hidden.</string>
+  <string name="open_system_tts_settings_title">Open text-to-speech settings</string>
+  <string name="open_system_tts_settings_summary">Choose the default TTS engine and configure Android speech output.</string>
+  <string name="voice_data_unavailable">Voice data could not be installed.</string>
   <!--
         Source: Dialog text.
         Description: Status message shown when installing voice data.
@@ -60,6 +63,7 @@
   <string name="variant_old">Old</string>
   <string name="variant_croak">Croak</string>
   <string name="variant_whisper">Whisper</string>
+  <string name="variant_other">Other</string>
   <string name="import_voice_title">Import eSpeak dictionary</string>
   <string name="import_voice_description">Import an eSpeak voice dictionary file from the SD card.</string>
 </resources>
