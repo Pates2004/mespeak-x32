@@ -105,10 +105,9 @@ jmethodID METHOD_nativeSynthWordCallback;
  * Reset by nativeSynthesize before each espeak_Synth call. */
 static int frames_delivered = 0;
 
-/* Optional post-synthesis time compression. The legacy eSpeak core clamps
- * its rate at 450 WPM; when the Java setting requests more, Sonic shortens
- * the generated PCM while preserving pitch. The stream is created lazily so
- * the normal path remains byte-for-byte unchanged. */
+/* Optional post-synthesis time compression. Above 450 WPM, the core uses
+ * clarity-oriented timing derived from eSpeak NG and Sonic performs the
+ * remaining compression while preserving pitch. */
 static float sonic_speed = 1.0f;
 static sonicStream sonic_stream = NULL;
 static int sonic_sample_rate = 22050;
@@ -455,11 +454,16 @@ JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSynthesize(
 }
 
 JNIEXPORT jboolean
-JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSetSonicSpeed(
-    JNIEnv *env, jobject object, jfloat speed) {
-  if (speed < 1.0f) speed = 1.0f;
-  if (speed > 3.0f) speed = 3.0f;
-  sonic_speed = speed;
+JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSetSonicRate(
+    JNIEnv *env, jobject object, jint rate) {
+  if (rate > espeakRATE_MAXIMUM) {
+    if (rate > espeakRATE_MAXIMUM * 3) rate = espeakRATE_MAXIMUM * 3;
+    sonic_speed = (float) rate / (float) espeakRATE_NORMAL;
+    espeak_SetSonicRate((int) rate);
+  } else {
+    sonic_speed = 1.0f;
+    espeak_SetSonicRate(0);
+  }
   return JNI_TRUE;
 }
 

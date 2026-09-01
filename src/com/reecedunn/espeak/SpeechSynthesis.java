@@ -259,12 +259,9 @@ public class SpeechSynthesis {
         nativeSynthesize(text, isSsml);
     }
 
-    /**
-     * Sets the optional post-synthesis time compression used for the rate
-     * boost setting. A value of 1 disables compression.
-     */
-    public void setSonicSpeed(float speed) {
-        nativeSetSonicSpeed(speed);
+    /** Selects clarity-oriented core timing and Sonic compression above 450 WPM. */
+    public void setSonicRate(int rate) {
+        nativeSetSonicRate(rate);
     }
 
     public void stop() {
@@ -343,7 +340,7 @@ public class SpeechSynthesis {
 
     private native final boolean nativeSynthesize(String text, boolean isSsml);
 
-    private native final boolean nativeSetSonicSpeed(float speed);
+    private native final boolean nativeSetSonicRate(int rate);
 
     private native final boolean nativeStop();
 

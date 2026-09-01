@@ -1150,6 +1150,12 @@ ESPEAK_API espeak_ERROR espeak_SetParameter(espeak_PARAMETER parameter, int valu
 }
 
 
+ESPEAK_API void espeak_SetSonicRate(int value)
+{//============================================
+	SetSonicRate(value);
+}
+
+
 ESPEAK_API espeak_ERROR espeak_SetPunctuationList(const wchar_t *punctlist)
 {//================================================================
   ENTER("espeak_SetPunctuationList");

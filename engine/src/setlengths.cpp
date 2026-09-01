@@ -131,6 +131,14 @@ static unsigned char wav_factor_350[] = {
 static int speed1 = 130;
 static int speed2 = 121;
 static int speed3 = 118;
+static int sonic_rate = 0;
+
+
+void SetSonicRate(int value)
+{//============================
+	sonic_rate = (value > espeakRATE_MAXIMUM) ? value : 0;
+	SetSpeed(3);
+}
 
 
 
@@ -164,6 +172,29 @@ void SetSpeed(int control)
 	if(voice->speed_percent > 0)
 	{
 		wpm = (wpm * voice->speed_percent)/100;
+	}
+
+	if(sonic_rate > espeakRATE_MAXIMUM)
+	{
+		// Keep the core articulation clear and let Sonic do the time compression.
+		// These factors mirror eSpeak NG's high-speed preparation.
+		x = 73;
+		if(control & 1)
+		{
+			speed1 = (x * voice->speedf1)/256;
+			speed2 = (x * voice->speedf2)/256;
+			speed3 = (x * voice->speedf3)/256;
+		}
+		if(control & 2)
+		{
+			speed.pause_factor = 85;
+			speed.clause_pause_factor = espeakRATE_MINIMUM;
+			speed.min_sample_len = espeakRATE_MAXIMUM * 2;
+			speed.wav_factor = 211;
+			speed.lenmod_factor = 210;
+			speed.lenmod2_factor = 170;
+		}
+		return;
 	}
 	if(wpm > 450)
 		wpm = 450;

@@ -461,13 +461,16 @@ public class TtsService extends TextToSpeechService {
             rateScale = 100;
         }
         rate = (int)(((long)rate * rateScale) / 100);
-        mEngine.Rate.setValue(rate);
-        float sonicSpeed = 1.0f;
-        if (settings.isRateBoostEnabled() && rate > mEngine.Rate.getMaxValue()) {
-            sonicSpeed = Math.min((float) VoiceSettings.RATE_BOOST_MULTIPLIER,
-                    (float) rate / (float) mEngine.Rate.getMaxValue());
+        final int normalMaximum = mEngine.Rate.getMaxValue();
+        final int boostedMaximum = normalMaximum * VoiceSettings.RATE_BOOST_MULTIPLIER;
+        if (settings.isRateBoostEnabled()) {
+            if (rate > boostedMaximum) rate = boostedMaximum;
+        } else if (rate > normalMaximum) {
+            rate = normalMaximum;
         }
-        mEngine.setSonicSpeed(sonicSpeed);
+        if (rate < mEngine.Rate.getMinValue()) rate = mEngine.Rate.getMinValue();
+        mEngine.Rate.setValue(Math.min(rate, normalMaximum));
+        mEngine.setSonicRate(settings.isRateBoostEnabled() && rate > normalMaximum ? rate : 0);
         mEngine.Pitch.setValue(settings.getPitch(), request.getPitch());
         mEngine.PitchRange.setValue(settings.getPitchRange());
         mEngine.Volume.setValue(settings.getVolume());
