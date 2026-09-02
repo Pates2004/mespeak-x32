@@ -90,7 +90,11 @@ static wchar_t *unicode_string(JNIEnv *env, jstring str)
 //@}
 
 #define LOG_TAG "eSpeakService"
+#ifdef NDEBUG
+#define DEBUG false
+#else
 #define DEBUG true
+#endif
 
 enum synthesis_result {
   SYNTH_CONTINUE = 0,

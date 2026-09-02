@@ -303,7 +303,9 @@ public class SpeechSynthesis {
             return;
         }
 
-        Log.i(TAG, "Initialized synthesis library with sample rate = " + getSampleRate());
+        if (BuildConfig.DEBUG) {
+            Log.i(TAG, "Initialized synthesis library with sample rate = " + getSampleRate());
+        }
 
         mInitialized = true;
     }

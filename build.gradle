@@ -38,8 +38,8 @@ android {
         applicationId = "com.pates2004.mespeak.x32"
         minSdk = 21
         targetSdk = 34
-        versionCode = 27
-        versionName = "1.44.05-r27"
+        versionCode = 28
+        versionName = "1.44.05-r28"
         resConfigs "en", "pl"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

@@ -289,7 +289,7 @@ public class TtsService extends TextToSpeechService {
 
     @Override
     protected void onStop() {
-        Log.i(TAG, "Received stop request.");
+        if (DEBUG) Log.i(TAG, "Received stop request.");
 
         mEngine.stop();
     }
