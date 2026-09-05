@@ -35,7 +35,7 @@
 #include "translate.h"
 #include "wave.h"
 
-const char *version_string = "1.44.05-r28 mespeak x32 Android";
+const char *version_string = "1.44.05-r29 mespeak x32 Android";
 const int version_phdata  = 0x014404;
 
 int option_device_number = -1;

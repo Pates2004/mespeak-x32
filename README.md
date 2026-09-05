@@ -2,7 +2,7 @@
 
 `mespeak x32` is the 32-bit Android Text-to-Speech edition of
 [`mespeak`](https://github.com/Pates2004/mespeak), based on eSpeak
-1.44.05-r28. It keeps the same TTS service, settings, JNI integration, native
+1.44.05-r29. It keeps the same TTS service, settings, JNI integration, native
 engine and current Polish dictionary as the 64-bit edition.
 
 The speech-rate dialog includes an optional Sonic time-compression boost. The
@@ -26,6 +26,9 @@ modern Android devices to the permanent Pates2004 release certificate. Its
 SHA-256 fingerprint is
 `2928C21E152E9FD245A5F423F0A11BD8FD658C09282684481C82EDF599E9E055`.
 Verbose Java and JNI diagnostic logging is disabled in release builds.
+
+Release r29 synchronizes the Polish dictionary with the Windows editions and
+keeps hard `z` in the complete *bezinteres-* word family.
 
 This repository is intended for older 32-bit Android devices and builds:
 
