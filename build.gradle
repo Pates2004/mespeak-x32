@@ -38,8 +38,8 @@ android {
         applicationId = "com.pates2004.mespeak.x32"
         minSdk = 21
         targetSdk = 34
-        versionCode = 29
-        versionName = "1.44.05-r29"
+        versionCode = 30
+        versionName = "1.44.05-r30"
         resConfigs "en", "pl"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -59,6 +59,12 @@ android {
         cmake {
             path = "jni/CMakeLists.txt"
             version = "3.22.1"
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
         }
     }
 

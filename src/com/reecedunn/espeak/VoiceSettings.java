@@ -143,7 +143,11 @@ public class VoiceSettings {
         if (prefString == null) {
             return defaultValue;
         }
-        return Integer.parseInt(prefString);
+        try {
+            return Integer.parseInt(prefString);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     public JSONObject toJSON() throws JSONException {

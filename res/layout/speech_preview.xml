@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:labelFor="@+id/preview_text"
+        android:text="@string/preview_title"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+    <EditText
+        android:id="@id/preview_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/preview_hint"
+        android:inputType="textCapSentences|textMultiLine"
+        android:gravity="top|start"
+        android:minLines="2"
+        android:maxLines="5"
+        android:saveEnabled="false" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/preview_speak"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/preview_speak" />
+        <Button
+            android:id="@+id/preview_stop"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/preview_stop" />
+    </LinearLayout>
+    <TextView
+        android:id="@+id/preview_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:accessibilityLiveRegion="polite"
+        android:text="@string/preview_ready" />
+</LinearLayout>

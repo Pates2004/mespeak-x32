@@ -22,7 +22,7 @@
   <string name="formatter_wpm">%s SNM</string>
   <string name="formatter_percentage">%s%%</string>
   <string name="resetToDefault">Ustaw domyślną</string>
-  <string name="espeak_pitch_range">Zakres wysokości</string>
+  <string name="espeak_pitch_range">Modulacja</string>
   <string name="espeak_variant">Wariant głosu</string>
   <string name="espeak_supported_languages">Obsługiwane języki</string>
   <string name="espeak_supported_languages_all">Wszystkie zainstalowane języki są zgłaszane do Androida.</string>
@@ -51,5 +51,17 @@
   <string name="open_system_tts_settings_title">Przejdź do ustawień zamiany tekstu na mowę</string>
   <string name="open_system_tts_settings_summary">Wybierz domyślny syntezator i skonfiguruj mowę w systemie Android.</string>
   <string name="voice_data_unavailable">Nie udało się zainstalować danych głosowych.</string>
+  <string name="system_tts_settings_unavailable">Android nie otworzył ustawień. Otwórz Ustawienia ręcznie i wyszukaj zamianę tekstu na mowę.</string>
+  <string name="preview_title">Testowanie mespeaka</string>
+  <string name="preview_hint">Tekst do przeczytania</string>
+  <string name="preview_sample">To jest przykład mowy syntezatora mespeak.</string>
+  <string name="preview_speak">Powiedz</string>
+  <string name="preview_stop">Zatrzymaj</string>
+  <string name="preview_ready">Używa bieżących ustawień głosu i języka systemu.</string>
+  <string name="preview_starting">Uruchamianie mespeaka…</string>
+  <string name="preview_speaking">Czytanie…</string>
+  <string name="preview_empty">Najpierw wpisz tekst.</string>
+  <string name="preview_too_long">Tekst jest za długi. Spróbuj krótszego fragmentu.</string>
+  <string name="preview_failed">mespeak nie mógł przeczytać tekstu. Spróbuj ponownie lub sprawdź włączone języki.</string>
   <string name="variant_other">Inne</string>
 </resources>

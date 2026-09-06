@@ -19,7 +19,7 @@
 package com.reecedunn.espeak;
 
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -38,7 +38,6 @@ import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceGroup;
 import android.preference.PreferenceManager;
-import android.provider.Settings;
 
 import com.reecedunn.espeak.BuildConfig;
 import com.reecedunn.espeak.preference.ImportVoicePreference;
@@ -46,6 +45,7 @@ import com.reecedunn.espeak.preference.SeekBarPreference;
 import com.reecedunn.espeak.preference.SpeakPunctuationPreference;
 import com.reecedunn.espeak.preference.SupportedLanguagesPreference;
 import com.reecedunn.espeak.preference.VoiceVariantPreference;
+import com.reecedunn.espeak.preference.SpeechPreviewPreference;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -62,7 +62,8 @@ import java.util.Stack;
 
 public class TtsSettingsActivity extends PreferenceActivity {
 
-    private static final String ACTION_TTS_SETTINGS = "com.android.settings.TTS_SETTINGS";
+    private SpeechPreviewPreference preview;
+    private String previewText;
     private static Context storageContext;
     private static final String TAG = TtsSettingsActivity.class.getSimpleName();
     private static final java.util.HashMap<String, LangInfo> sLangInfo = new java.util.HashMap<String, LangInfo>();
@@ -70,7 +71,13 @@ public class TtsSettingsActivity extends PreferenceActivity {
     @Override
     @SuppressWarnings("deprecation")
     protected void onCreate(Bundle savedInstanceState) {
+        // Restored fragments can start loading during super.onCreate().
+        storageContext = EspeakApp.getStorageContext();
         super.onCreate(savedInstanceState);
+        setTaskDescription(new ActivityManager.TaskDescription(getString(R.string.app_name)));
+        if (savedInstanceState != null) {
+            previewText = savedInstanceState.getString("preview_text");
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
         {
@@ -87,19 +94,20 @@ public class TtsSettingsActivity extends PreferenceActivity {
         if (pitch == null) {
             // Try the old eyes-free setting:
             pitch = prefs.getString(VoiceSettings.PREF_DEFAULT_PITCH, "100");
-            int pitchValue = Integer.parseInt(pitch) / 2;
+            int pitchValue = parseLegacyNumber(pitch, 100) / 2;
             editor.putString(VoiceSettings.PREF_PITCH, Integer.toString(pitchValue));
         }
 
         String rate = prefs.getString(VoiceSettings.PREF_RATE, null);
         if (rate == null) {
             // Try the old eyes-free setting:
-            SpeechSynthesis engine = new SpeechSynthesis(storageContext, null);
-            int defaultValue = engine.Rate.getDefaultValue();
-            int maxValue = engine.Rate.getMaxValue();
+            // Data is installed on the worker before native initialization.
+            int defaultValue = 175;
+            int maxValue = 450;
 
             rate = prefs.getString(VoiceSettings.PREF_DEFAULT_RATE, "100");
-            int rateValue = (Integer.parseInt(rate) / 100) * defaultValue;
+            int rateValue = (int) Math.min(maxValue,
+                    ((long) parseLegacyNumber(rate, 100) * defaultValue) / 100);
             if (rateValue < defaultValue) rateValue = defaultValue;
             if (rateValue > maxValue) rateValue = maxValue;
             editor.putString(VoiceSettings.PREF_RATE, Integer.toString(rateValue));
@@ -119,7 +127,7 @@ public class TtsSettingsActivity extends PreferenceActivity {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB)
         {
-            getFragmentManager().beginTransaction().replace(
+            if (savedInstanceState == null) getFragmentManager().beginTransaction().replace(
                     android.R.id.content,
                     new PrefsEspeakFragment()).commit();
         }
@@ -135,9 +143,32 @@ public class TtsSettingsActivity extends PreferenceActivity {
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
 
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                getPreferenceManager().setStorageDeviceProtected();
+            }
             addPreferencesFromResource(R.xml.preferences);
             createPreferences(getActivity(), getPreferenceScreen());
         }
+    }
+
+    private static int parseLegacyNumber(String value, int fallback) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle state) {
+        state.putString("preview_text", preview == null ? previewText : preview.getText());
+        super.onSaveInstanceState(state);
+    }
+
+    @Override
+    protected void onStop() {
+        if (preview != null) preview.shutdown();
+        super.onStop();
     }
 
     private static Preference createImportVoicePreference(Context context) {
@@ -211,7 +242,8 @@ public class TtsSettingsActivity extends PreferenceActivity {
         if (prefString == null) {
             pref.setProgress(defaultValue);
         } else {
-            pref.setProgress(Integer.parseInt(prefString));
+            pref.setProgress(Math.max(parameter.getMinValue(),
+                    Math.min(parameter.getMaxValue(), parseLegacyNumber(prefString, defaultValue))));
         }
 
         return pref;
@@ -247,11 +279,7 @@ public class TtsSettingsActivity extends PreferenceActivity {
         pref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
             @Override
             public boolean onPreferenceClick(Preference preference) {
-                try {
-                    context.startActivity(new Intent(ACTION_TTS_SETTINGS));
-                } catch (ActivityNotFoundException e) {
-                    context.startActivity(new Intent(Settings.ACTION_SETTINGS));
-                }
+                SystemTtsSettings.open(context);
                 return true;
             }
         });
@@ -508,6 +536,9 @@ public class TtsSettingsActivity extends PreferenceActivity {
         group.addPreference(createSeekBarPreference(context, engine.Pitch, VoiceSettings.PREF_PITCH, R.string.setting_default_pitch));
         group.addPreference(createSeekBarPreference(context, engine.PitchRange, VoiceSettings.PREF_PITCH_RANGE, R.string.espeak_pitch_range));
         group.addPreference(createSeekBarPreference(context, engine.Volume, VoiceSettings.PREF_VOLUME, R.string.espeak_volume));
+        final TtsSettingsActivity activity = (TtsSettingsActivity) context;
+        activity.preview = new SpeechPreviewPreference(activity, activity.previewText);
+        group.addPreference(activity.preview);
     }
 
     private static final OnPreferenceChangeListener mOnPreferenceChanged =

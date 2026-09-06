@@ -112,4 +112,11 @@ finally {
     Remove-Item Env:MESPEAK_RELEASE_KEY_PASSWORD -ErrorAction SilentlyContinue
 }
 
-Write-Output $signedApk
+$installFiles = Join-Path $repoRoot 'installfiles'
+New-Item -ItemType Directory -Path $installFiles -Force | Out-Null
+$installerCopy = Join-Path $installFiles ([IO.Path]::GetFileName($signedApk))
+Copy-Item -LiteralPath $signedApk -Destination $installerCopy -Force
+if ((Get-FileHash -LiteralPath $signedApk).Hash -ne (Get-FileHash -LiteralPath $installerCopy).Hash) {
+    throw 'The installfiles APK copy did not match the signed build.'
+}
+Write-Output $installerCopy

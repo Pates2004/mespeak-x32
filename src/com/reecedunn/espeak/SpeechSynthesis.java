@@ -63,6 +63,9 @@ public class SpeechSynthesis {
     private final String mDatapath;
 
     private boolean mInitialized = false;
+    private static final Object INITIALIZATION_LOCK = new Object();
+    private static int sSampleRate;
+    private static String[] sVoiceData = new String[0];
     private static int mVoiceCount = 0;
     private int mSampleRate = 0;
 
@@ -123,7 +126,10 @@ public class SpeechSynthesis {
 
     public List<Voice> getAvailableVoices() {
         final List<Voice> voices = new LinkedList<Voice>();
-        final String[] results = nativeGetAvailableVoices();
+        final String[] results;
+        synchronized (INITIALIZATION_LOCK) {
+            results = sVoiceData;
+        }
         mVoiceCount = results.length / 4;
 
         for (int i = 0; i < results.length; i += 4) {
@@ -288,7 +294,21 @@ public class SpeechSynthesis {
     }
 
     private void attemptInit() {
+        synchronized (INITIALIZATION_LOCK) {
+            initializeOnce();
+        }
+    }
+
+    private void initializeOnce() {
         if (mInitialized) {
+            return;
+        }
+
+        // The classic core is process-global. Reinitializing it from Settings
+        // or CHECK_TTS_DATA can reset/reallocate buffers while TtsService speaks.
+        if (sSampleRate > 0) {
+            mSampleRate = sSampleRate;
+            mInitialized = true;
             return;
         }
 
@@ -298,7 +318,8 @@ public class SpeechSynthesis {
         }
 
         mSampleRate = nativeCreate(mDatapath);
-        if (mSampleRate == 0) {
+        if (mSampleRate <= 0) {
+            mSampleRate = 0;
             Log.e(TAG, "Failed to initialize speech synthesis library");
             return;
         }
@@ -307,12 +328,14 @@ public class SpeechSynthesis {
             Log.i(TAG, "Initialized synthesis library with sample rate = " + getSampleRate());
         }
 
+        sVoiceData = nativeGetAvailableVoices();
+        sSampleRate = mSampleRate;
         mInitialized = true;
     }
 
     public static String getSampleText(Context context, Locale locale) {
         final DisplayMetrics metrics = context.getResources().getDisplayMetrics();
-        final Configuration config = context.getResources().getConfiguration();
+        final Configuration config = new Configuration(context.getResources().getConfiguration());
 
         final String language = getIanaLanguageCode(locale.getLanguage());
         final String country = getIanaCountryCode(locale.getCountry());

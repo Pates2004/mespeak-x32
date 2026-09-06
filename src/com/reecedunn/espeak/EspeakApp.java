@@ -31,6 +31,9 @@ public class EspeakApp extends Application {
         Context appContext = getApplicationContext();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             EspeakApp.storageContext = appContext.createDeviceProtectedStorageContext();
+            // All settings screens and the service must use the same store.
+            storageContext.moveSharedPreferencesFrom(appContext,
+                    getPackageName() + "_preferences");
         }
         else {
             EspeakApp.storageContext = appContext;
@@ -49,7 +52,14 @@ public class EspeakApp extends Application {
         final ComponentName launcher = new ComponentName(
                 context.getPackageName(), EspeakApp.class.getPackage().getName() + ".Launcher");
         try {
-            context.getPackageManager().setComponentEnabledSetting(
+            final PackageManager manager = context.getPackageManager();
+            final int current = manager.getComponentEnabledSetting(launcher);
+            final boolean currentlyVisible = current == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                    || current == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT;
+            if (currentlyVisible == visible) {
+                return true;
+            }
+            manager.setComponentEnabledSetting(
                     launcher,
                     visible ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
                             : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,

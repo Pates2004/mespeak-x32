@@ -25,6 +25,18 @@
   <string name="open_system_tts_settings_title">Open text-to-speech settings</string>
   <string name="open_system_tts_settings_summary">Choose the default TTS engine and configure Android speech output.</string>
   <string name="voice_data_unavailable">Voice data could not be installed.</string>
+  <string name="system_tts_settings_unavailable">Android could not open Settings. Open Settings manually and search for text-to-speech.</string>
+  <string name="preview_title">Test mespeak</string>
+  <string name="preview_hint">Text to speak</string>
+  <string name="preview_sample">This is a sample of speech from mespeak.</string>
+  <string name="preview_speak">Speak</string>
+  <string name="preview_stop">Stop</string>
+  <string name="preview_ready">Uses the current voice settings and the system language.</string>
+  <string name="preview_starting">Starting mespeak…</string>
+  <string name="preview_speaking">Speaking…</string>
+  <string name="preview_empty">Enter some text first.</string>
+  <string name="preview_too_long">The text is too long. Try a shorter passage.</string>
+  <string name="preview_failed">mespeak could not speak. Try again or check the enabled languages.</string>
   <!--
         Source: Dialog text.
         Description: Status message shown when installing voice data.
@@ -39,7 +51,7 @@
   <string name="formatter_wpm">%s WPM</string>
   <string name="formatter_percentage">%s%%</string>
   <string name="resetToDefault">Set to default</string>
-  <string name="espeak_pitch_range">Pitch variation</string>
+  <string name="espeak_pitch_range">Inflection</string>
   <string name="espeak_variant">Voice variant</string>
   <string name="espeak_supported_languages">Supported languages</string>
   <string name="espeak_supported_languages_all">All installed languages are reported to Android.</string>

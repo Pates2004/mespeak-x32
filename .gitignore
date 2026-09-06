@@ -1,6 +1,7 @@
 /.cxx/
 /.gradle/
 /build/
+/installfiles/
 /res/raw/espeakdata.zip
 /res/raw/espeakdata_version
 /local.properties
