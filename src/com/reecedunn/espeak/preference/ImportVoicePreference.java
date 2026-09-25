@@ -30,6 +30,7 @@ import android.widget.Spinner;
 
 import com.reecedunn.espeak.CheckVoiceData;
 import com.reecedunn.espeak.DownloadVoiceData;
+import com.reecedunn.espeak.EspeakApp;
 import com.reecedunn.espeak.FileListAdapter;
 import com.reecedunn.espeak.FileUtils;
 import com.reecedunn.espeak.R;
@@ -98,10 +99,8 @@ public class ImportVoicePreference extends DialogPreference {
                     protected File doInBackground(Object... objects) {
                         File source = (File)mDictionaries.getSelectedItem();
                         if (source != null) {
-                            File destination = new File(CheckVoiceData.getDataPath(getContext()), source.getName());
                             try {
-                                byte[] data = FileUtils.readBinary(source);
-                                FileUtils.write(destination, data);
+                                CheckVoiceData.installImportedDictionary(EspeakApp.getStorageContext(), source);
                                 return source;
                             } catch (IOException e) {
                             }

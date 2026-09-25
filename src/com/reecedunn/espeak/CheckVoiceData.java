@@ -28,7 +28,9 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.UserManager;
 import android.preference.PreferenceManager;
 import android.speech.tts.TextToSpeech.Engine;
 import android.util.Log;
@@ -41,8 +43,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -58,6 +63,17 @@ public class CheckVoiceData extends Activity {
         "phonindex",
         "phontab",
         "en_dict",
+    };
+
+    // Git blob IDs of Polish dictionaries shipped in earlier meSpeak releases.
+    // An older bundled pl_dict must be replaced, while a user override must
+    // survive the data refresh even when it has the same filename.
+    private static final String[] OLD_POLISH_DICTIONARIES = {
+        "ed0d43f28c335890e89b32997c1197c2c3435216",
+        "1e3683d0a1a68855b3a27e895a3fe0a2bd918b64",
+        "dd07b632b200f42c100bb3c0481aacc309c406cd",
+        "ee98069936bdb9c1e098af8cbbb504cbc4b4bfc7",
+        "a1160dfdbdf5df60815391d81e67ac9d682af25e",
     };
 
     public static File getDataPath(Context context) {
@@ -91,13 +107,13 @@ public class CheckVoiceData extends Activity {
 
     public static synchronized boolean extractVoiceData(Context context) {
         final File dataPath = getDataPath(context);
-        FileUtils.rmdir(dataPath);
-
         final InputStream stream = context.getResources().openRawResource(R.raw.espeakdata);
         final ZipInputStream zipStream = new ZipInputStream(new BufferedInputStream(stream));
         final File outputDir = dataPath.getParentFile();
 
         try {
+            preserveLegacyImportedDictionaries(context);
+            FileUtils.rmdir(dataPath);
             final String canonicalOutputDirPath = outputDir.getCanonicalPath() + File.separator;
             final byte[] buffer = new byte[10240];
             int bytesRead;
@@ -124,6 +140,7 @@ public class CheckVoiceData extends Activity {
                 zipStream.closeEntry();
             }
 
+            restoreImportedDictionaries(context);
             final String version = FileUtils.read(
                 context.getResources().openRawResource(R.raw.espeakdata_version));
             FileUtils.write(new File(getDataPath(context), "version"), version);
@@ -137,6 +154,92 @@ public class CheckVoiceData extends Activity {
             } catch (IOException e) {
                 // ignored
             }
+        }
+    }
+
+    private static File getImportedDictionaryPath(Context context) {
+        return context.getDir("imported_dictionaries", MODE_PRIVATE);
+    }
+
+    public static synchronized void installImportedDictionary(Context context, File source)
+            throws IOException {
+        if (!source.isFile() || !source.getName().endsWith("_dict")) {
+            throw new IOException("Not a dictionary file");
+        }
+        final byte[] contents = FileUtils.readBinary(source);
+        final File retained = new File(getImportedDictionaryPath(context), source.getName());
+        FileUtils.write(retained, contents);
+        FileUtils.write(new File(getDataPath(context), source.getName()), contents);
+    }
+
+    private static void preserveLegacyImportedDictionaries(Context context) throws Exception {
+        final List<File> installed = new ArrayList<File>();
+        final File[] active = getDataPath(context).listFiles();
+        if (active != null) installed.addAll(Arrays.asList(active));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && context.isDeviceProtectedStorage()) {
+            final UserManager users = (UserManager) context.getSystemService(Context.USER_SERVICE);
+            if (users != null && users.isUserUnlocked()) {
+                // Older import screens used credential storage while the TTS
+                // service used device storage. Migrate those imports too.
+                final Context credentialContext =
+                    context.createPackageContext(context.getPackageName(), 0);
+                final File legacyPath = getDataPath(credentialContext);
+                final File[] legacy = legacyPath.listFiles();
+                if (legacy != null) installed.addAll(Arrays.asList(legacy));
+            }
+        }
+        if (installed.isEmpty()) return;
+        final Map<String, byte[]> bundled = new HashMap<String, byte[]>();
+        final ZipInputStream archive = new ZipInputStream(new BufferedInputStream(
+            context.getResources().openRawResource(R.raw.espeakdata)));
+        try {
+            ZipEntry entry;
+            while ((entry = archive.getNextEntry()) != null) {
+                if (entry.isDirectory() || !entry.getName().endsWith("_dict")) continue;
+                final String name = new File(entry.getName()).getName();
+                final java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+                final byte[] buffer = new byte[10240];
+                int count;
+                while ((count = archive.read(buffer)) != -1) bytes.write(buffer, 0, count);
+                bundled.put(name, bytes.toByteArray());
+            }
+        } finally {
+            archive.close();
+        }
+        final File retained = getImportedDictionaryPath(context);
+        for (File dictionary : installed) {
+            if (!dictionary.isFile() || !dictionary.getName().endsWith("_dict")) continue;
+            final File saved = new File(retained, dictionary.getName());
+            if (saved.exists()) continue;
+            final byte[] oldBytes = FileUtils.readBinary(dictionary);
+            if (Arrays.equals(oldBytes, bundled.get(dictionary.getName()))) continue;
+            if ("pl_dict".equals(dictionary.getName()) && isPreviouslyBundledPolish(oldBytes)) {
+                continue;
+            }
+            FileUtils.write(saved, oldBytes);
+        }
+    }
+
+    private static boolean isPreviouslyBundledPolish(byte[] contents) throws Exception {
+        final java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-1");
+        digest.update(("blob " + contents.length + "\u0000").getBytes("UTF-8"));
+        digest.update(contents);
+        final byte[] hash = digest.digest();
+        final StringBuilder hex = new StringBuilder(hash.length * 2);
+        for (byte value : hash) hex.append(String.format(Locale.ROOT, "%02x", value & 0xff));
+        for (String bundledHash : OLD_POLISH_DICTIONARIES) {
+            if (bundledHash.equals(hex.toString())) return true;
+        }
+        return false;
+    }
+
+    private static void restoreImportedDictionaries(Context context) throws IOException {
+        final File[] imported = getImportedDictionaryPath(context).listFiles();
+        if (imported == null) return;
+        for (File dictionary : imported) {
+            if (!dictionary.isFile() || !dictionary.getName().endsWith("_dict")) continue;
+            FileUtils.write(new File(getDataPath(context), dictionary.getName()),
+                FileUtils.readBinary(dictionary));
         }
     }
 

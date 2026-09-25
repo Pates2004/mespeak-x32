@@ -26,7 +26,12 @@ import java.io.InputStream;
 
 public class FileUtils {
     public static String read(File file) throws IOException {
-        return readByteArray(new FileInputStream(file), (int)file.length()).toString();
+        FileInputStream stream = new FileInputStream(file);
+        try {
+            return readByteArray(stream, (int)file.length()).toString();
+        } finally {
+            stream.close();
+        }
     }
 
     public static String read(InputStream stream) throws IOException {
@@ -38,7 +43,12 @@ public class FileUtils {
     }
 
     public static byte[] readBinary(File file) throws IOException {
-        return readByteArray(new FileInputStream(file), (int)file.length()).toByteArray();
+        FileInputStream stream = new FileInputStream(file);
+        try {
+            return readByteArray(stream, (int)file.length()).toByteArray();
+        } finally {
+            stream.close();
+        }
     }
 
     public static byte[] readBinary(InputStream stream) throws IOException {

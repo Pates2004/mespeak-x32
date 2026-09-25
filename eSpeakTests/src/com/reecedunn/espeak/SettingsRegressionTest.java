@@ -28,6 +28,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -41,6 +43,73 @@ import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 public class SettingsRegressionTest {
     private final Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+
+    @Test
+    public void importedDictionarySurvivesBundledDataRefresh() throws Exception {
+        Context storage = EspeakApp.getStorageContext();
+        assertTrue(CheckVoiceData.ensureVoiceData(storage));
+        File source = new File(context.getCacheDir(), "af_dict");
+        File installed = new File(CheckVoiceData.getDataPath(storage), source.getName());
+        byte[] bundled = FileUtils.readBinary(installed);
+        byte[] contents = "imported dictionary sample".getBytes(StandardCharsets.UTF_8);
+        try {
+            try (FileOutputStream output = new FileOutputStream(source)) {
+                output.write(contents);
+            }
+            CheckVoiceData.installImportedDictionary(storage, source);
+            assertTrue(CheckVoiceData.extractVoiceData(storage));
+            assertArrayEquals(contents, FileUtils.readBinary(
+                    new File(CheckVoiceData.getDataPath(storage), source.getName())));
+        } finally {
+            new File(storage.getDir("imported_dictionaries", Context.MODE_PRIVATE),
+                    source.getName()).delete();
+            FileUtils.write(installed, bundled);
+            source.delete();
+        }
+    }
+
+    @Test
+    public void legacyImportedDictionarySurvivesBundledDataRefresh() throws Exception {
+        Context storage = EspeakApp.getStorageContext();
+        assertTrue(CheckVoiceData.ensureVoiceData(storage));
+        File installed = new File(CheckVoiceData.getDataPath(storage), "zz_legacy_dict");
+        File retained = new File(storage.getDir("imported_dictionaries", Context.MODE_PRIVATE),
+                installed.getName());
+        byte[] contents = "legacy dictionary sample".getBytes(StandardCharsets.UTF_8);
+        try {
+            FileUtils.write(installed, contents);
+            assertTrue(CheckVoiceData.extractVoiceData(storage));
+            assertArrayEquals(contents, FileUtils.readBinary(installed));
+            assertArrayEquals(contents, FileUtils.readBinary(retained));
+        } finally {
+            installed.delete();
+            retained.delete();
+        }
+    }
+
+    @Test
+    public void oldCredentialStorageImportMigratesToTheEngine() throws Exception {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return;
+        Context storage = EspeakApp.getStorageContext();
+        assertTrue(CheckVoiceData.ensureVoiceData(storage));
+        File legacy = new File(CheckVoiceData.getDataPath(context), "zz_credential_dict");
+        File installed = new File(CheckVoiceData.getDataPath(storage), legacy.getName());
+        assertNotEquals("Credential and device storage must differ",
+                legacy.getCanonicalPath(), installed.getCanonicalPath());
+        File retained = new File(storage.getDir("imported_dictionaries", Context.MODE_PRIVATE),
+                legacy.getName());
+        byte[] contents = "credential dictionary sample".getBytes(StandardCharsets.UTF_8);
+        try {
+            assertTrue(legacy.getParentFile().isDirectory() || legacy.getParentFile().mkdirs());
+            FileUtils.write(legacy, contents);
+            assertTrue(CheckVoiceData.extractVoiceData(storage));
+            assertArrayEquals(contents, FileUtils.readBinary(installed));
+        } finally {
+            legacy.delete();
+            installed.delete();
+            retained.delete();
+        }
+    }
 
     @Test
     public void systemSettingsFallsBackWhenOemProtectsTtsActivity() {
