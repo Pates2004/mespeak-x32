@@ -39,8 +39,8 @@ Settings as fallbacks. The existing pitch-range slider is labelled Inflection
 the current mespeak settings without changing Android's default engine.
 
 The native core and voice catalog are initialized once per process, so opening
-Settings or checking voice data does not reset a running synthesis. Voice data
-is unchanged since r29 and keeps its existing data-version marker. Signed APKs
+Settings or checking voice data does not reset a running synthesis. In r30,
+voice data was unchanged since r29 and kept its then-current marker. Signed APKs
 are also copied to `installfiles` by `build-release.ps1`.
 
 Release r31 updates the Polish dictionary to keep `ci` in forms such as
