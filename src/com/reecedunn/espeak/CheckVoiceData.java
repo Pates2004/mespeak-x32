@@ -54,6 +54,7 @@ import java.util.zip.ZipInputStream;
 
 public class CheckVoiceData extends Activity {
     private static final String TAG = "eSpeakTTS";
+    static final String PREF_LEGACY_IMPORTS_HANDLED = "legacy_imports_handled";
 
     /** Resources required for eSpeak to run correctly. */
     private static final String[] BASE_RESOURCES = {
@@ -112,7 +113,15 @@ public class CheckVoiceData extends Activity {
         final File outputDir = dataPath.getParentFile();
 
         try {
-            preserveLegacyImportedDictionaries(context);
+            final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            final boolean preserveImports = prefs.getBoolean(
+                EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, true);
+            final boolean migrationPending = !prefs.getBoolean(PREF_LEGACY_IMPORTS_HANDLED, false);
+            final boolean scanLegacy = migrationPending
+                && isLegacyStorageReady(context);
+            if (preserveImports && migrationPending) {
+                preserveLegacyImportedDictionaries(context, scanLegacy);
+            }
             FileUtils.rmdir(dataPath);
             final String canonicalOutputDirPath = outputDir.getCanonicalPath() + File.separator;
             final byte[] buffer = new byte[10240];
@@ -123,6 +132,12 @@ public class CheckVoiceData extends Activity {
                 final File file = new File(outputDir, entry.getName());
                 if (!file.getCanonicalPath().startsWith(canonicalOutputDirPath)) {
                     throw new SecurityException("Zip entry outside target dir: " + entry.getName());
+                }
+                // Commit the data marker only after imports have been
+                // restored or discarded successfully.
+                if ("espeak-ng-data/version".equals(entry.getName())) {
+                    zipStream.closeEntry();
+                    continue;
                 }
                 if (entry.isDirectory()) {
                     file.mkdirs();
@@ -140,10 +155,17 @@ public class CheckVoiceData extends Activity {
                 zipStream.closeEntry();
             }
 
-            restoreImportedDictionaries(context);
+            if (preserveImports) {
+                restoreImportedDictionaries(context);
+            } else {
+                discardRetainedDictionaries(context);
+            }
             final String version = FileUtils.read(
                 context.getResources().openRawResource(R.raw.espeakdata_version));
             FileUtils.write(new File(getDataPath(context), "version"), version);
+            if (scanLegacy && !prefs.edit().putBoolean(PREF_LEGACY_IMPORTS_HANDLED, true).commit()) {
+                throw new IOException("Failed to record legacy import migration");
+            }
             return true;
         } catch (Exception e) {
             Log.e(TAG, "Failed to extract voice data", e);
@@ -172,21 +194,28 @@ public class CheckVoiceData extends Activity {
         FileUtils.write(new File(getDataPath(context), source.getName()), contents);
     }
 
-    private static void preserveLegacyImportedDictionaries(Context context) throws Exception {
+    private static boolean isLegacyStorageReady(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N || !context.isDeviceProtectedStorage()) {
+            return true;
+        }
+        final UserManager users = (UserManager) context.getSystemService(Context.USER_SERVICE);
+        return users != null && users.isUserUnlocked();
+    }
+
+    private static void preserveLegacyImportedDictionaries(Context context, boolean scanLegacy)
+            throws Exception {
         final List<File> installed = new ArrayList<File>();
         final File[] active = getDataPath(context).listFiles();
         if (active != null) installed.addAll(Arrays.asList(active));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && context.isDeviceProtectedStorage()) {
-            final UserManager users = (UserManager) context.getSystemService(Context.USER_SERVICE);
-            if (users != null && users.isUserUnlocked()) {
-                // Older import screens used credential storage while the TTS
-                // service used device storage. Migrate those imports too.
-                final Context credentialContext =
-                    context.createPackageContext(context.getPackageName(), 0);
-                final File legacyPath = getDataPath(credentialContext);
-                final File[] legacy = legacyPath.listFiles();
-                if (legacy != null) installed.addAll(Arrays.asList(legacy));
-            }
+        if (scanLegacy && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
+                && context.isDeviceProtectedStorage()) {
+            // Older import screens used credential storage while the TTS
+            // service used device storage. Migrate those imports once.
+            final Context credentialContext =
+                context.createPackageContext(context.getPackageName(), 0);
+            final File legacyPath = getDataPath(credentialContext);
+            final File[] legacy = legacyPath.listFiles();
+            if (legacy != null) installed.addAll(Arrays.asList(legacy));
         }
         if (installed.isEmpty()) return;
         final Map<String, byte[]> bundled = new HashMap<String, byte[]>();
@@ -243,10 +272,36 @@ public class CheckVoiceData extends Activity {
         }
     }
 
+    private static void discardRetainedDictionaries(Context context) throws IOException {
+        final File[] retained = getImportedDictionaryPath(context).listFiles();
+        if (retained == null) return;
+        for (File dictionary : retained) {
+            if (!dictionary.isFile() || !dictionary.getName().endsWith("_dict")) continue;
+            if (!dictionary.delete() && dictionary.exists()) {
+                throw new IOException("Failed to discard imported dictionary");
+            }
+        }
+    }
+
     /** Ensures that bundled voice data is ready before the native engine starts. */
     public static synchronized boolean ensureVoiceData(Context context) {
         if (hasBaseResources(context) && !canUpgradeResources(context)) {
-            return true;
+            // Direct Boot may have delayed access to older credential storage.
+            // Finish that one-time migration after unlock without reinstalling
+            // the whole bundled voice archive.
+            final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            if (prefs.getBoolean(PREF_LEGACY_IMPORTS_HANDLED, false)
+                    || !isLegacyStorageReady(context)) return true;
+            try {
+                if (prefs.getBoolean(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, true)) {
+                    preserveLegacyImportedDictionaries(context, true);
+                    restoreImportedDictionaries(context);
+                }
+                return prefs.edit().putBoolean(PREF_LEGACY_IMPORTS_HANDLED, true).commit();
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to migrate legacy dictionaries", e);
+                return false;
+            }
         }
         return extractVoiceData(context) && hasBaseResources(context);
     }

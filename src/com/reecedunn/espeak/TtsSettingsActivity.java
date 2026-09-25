@@ -249,6 +249,20 @@ public class TtsSettingsActivity extends PreferenceActivity {
         return pref;
     }
 
+    private static Preference createPreserveImportedDictionariesPreference(Context context) {
+        final CheckBoxPreference pref = new CheckBoxPreference(context);
+        pref.setKey(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES);
+        pref.setTitle(R.string.preserve_imported_dictionaries_title);
+        pref.setSummary(R.string.preserve_imported_dictionaries_summary);
+        pref.setPersistent(true);
+        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(storageContext);
+        if (!prefs.contains(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES)) {
+            prefs.edit().putBoolean(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, true).apply();
+        }
+        pref.setChecked(prefs.getBoolean(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, true));
+        return pref;
+    }
+
     private static Preference createLauncherVisibilityPreference(final Context context) {
         final CheckBoxPreference pref = new CheckBoxPreference(context);
         pref.setKey(EspeakApp.PREF_SHOW_LAUNCHER);
@@ -529,6 +543,7 @@ public class TtsSettingsActivity extends PreferenceActivity {
         if (!isWatch) {
             group.addPreference(createSupportedLanguagesPreference(context, voices));
             group.addPreference(createImportVoicePreference(context));
+            group.addPreference(createPreserveImportedDictionariesPreference(context));
         }
         group.addPreference(createVoiceVariantPreference(context, settings, R.string.espeak_variant));
         group.addPreference(createSpeakPunctuationPreference(context, settings, R.string.espeak_speak_punctuation));

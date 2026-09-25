@@ -24,6 +24,7 @@ import android.os.Build;
 
 public class EspeakApp extends Application {
     public static final String PREF_SHOW_LAUNCHER = "show_launcher";
+    public static final String PREF_PRESERVE_IMPORTED_DICTIONARIES = "preserve_imported_dictionaries";
     private static Context storageContext;
 
     public void onCreate() {

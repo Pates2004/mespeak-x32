@@ -72,11 +72,15 @@ public class SettingsRegressionTest {
     public void legacyImportedDictionarySurvivesBundledDataRefresh() throws Exception {
         Context storage = EspeakApp.getStorageContext();
         assertTrue(CheckVoiceData.ensureVoiceData(storage));
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(storage);
+        boolean oldMarker = prefs.getBoolean(CheckVoiceData.PREF_LEGACY_IMPORTS_HANDLED, false);
         File installed = new File(CheckVoiceData.getDataPath(storage), "zz_legacy_dict");
         File retained = new File(storage.getDir("imported_dictionaries", Context.MODE_PRIVATE),
                 installed.getName());
         byte[] contents = "legacy dictionary sample".getBytes(StandardCharsets.UTF_8);
         try {
+            assertTrue(prefs.edit().putBoolean(
+                    CheckVoiceData.PREF_LEGACY_IMPORTS_HANDLED, false).commit());
             FileUtils.write(installed, contents);
             assertTrue(CheckVoiceData.extractVoiceData(storage));
             assertArrayEquals(contents, FileUtils.readBinary(installed));
@@ -84,6 +88,8 @@ public class SettingsRegressionTest {
         } finally {
             installed.delete();
             retained.delete();
+            prefs.edit().putBoolean(CheckVoiceData.PREF_LEGACY_IMPORTS_HANDLED,
+                    oldMarker).commit();
         }
     }
 
@@ -92,6 +98,9 @@ public class SettingsRegressionTest {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return;
         Context storage = EspeakApp.getStorageContext();
         assertTrue(CheckVoiceData.ensureVoiceData(storage));
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(storage);
+        boolean oldMarker = prefs.getBoolean(CheckVoiceData.PREF_LEGACY_IMPORTS_HANDLED, false);
+        boolean oldPreserve = prefs.getBoolean(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, true);
         File legacy = new File(CheckVoiceData.getDataPath(context), "zz_credential_dict");
         File installed = new File(CheckVoiceData.getDataPath(storage), legacy.getName());
         assertNotEquals("Credential and device storage must differ",
@@ -100,6 +109,8 @@ public class SettingsRegressionTest {
                 legacy.getName());
         byte[] contents = "credential dictionary sample".getBytes(StandardCharsets.UTF_8);
         try {
+            assertTrue(prefs.edit().putBoolean(CheckVoiceData.PREF_LEGACY_IMPORTS_HANDLED, false)
+                    .putBoolean(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, true).commit());
             assertTrue(legacy.getParentFile().isDirectory() || legacy.getParentFile().mkdirs());
             FileUtils.write(legacy, contents);
             assertTrue(CheckVoiceData.extractVoiceData(storage));
@@ -108,6 +119,66 @@ public class SettingsRegressionTest {
             legacy.delete();
             installed.delete();
             retained.delete();
+            prefs.edit().putBoolean(CheckVoiceData.PREF_LEGACY_IMPORTS_HANDLED, oldMarker)
+                    .putBoolean(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, oldPreserve).commit();
+        }
+    }
+
+    @Test
+    public void turningOffPreservationRestoresBundledDictionaryOnUpdate() throws Exception {
+        Context storage = EspeakApp.getStorageContext();
+        assertTrue(CheckVoiceData.ensureVoiceData(storage));
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(storage);
+        boolean oldSetting = prefs.getBoolean(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, true);
+        File source = new File(context.getCacheDir(), "af_dict");
+        File installed = new File(CheckVoiceData.getDataPath(storage), source.getName());
+        File retained = new File(storage.getDir("imported_dictionaries", Context.MODE_PRIVATE),
+                source.getName());
+        byte[] bundled = FileUtils.readBinary(installed);
+        try {
+            try (FileOutputStream output = new FileOutputStream(source)) {
+                output.write("temporary override".getBytes(StandardCharsets.UTF_8));
+            }
+            CheckVoiceData.installImportedDictionary(storage, source);
+            assertTrue(retained.exists());
+            assertTrue(prefs.edit().putBoolean(
+                    EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, false).commit());
+            assertTrue(CheckVoiceData.extractVoiceData(storage));
+            assertArrayEquals(bundled, FileUtils.readBinary(installed));
+            assertFalse(retained.exists());
+        } finally {
+            prefs.edit().putBoolean(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES,
+                    oldSetting).commit();
+            retained.delete();
+            FileUtils.write(installed, bundled);
+            source.delete();
+        }
+    }
+
+    @Test
+    public void laterUpdatesDoNotMisclassifyBundledChangesAsImports() throws Exception {
+        Context storage = EspeakApp.getStorageContext();
+        assertTrue(CheckVoiceData.ensureVoiceData(storage));
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(storage);
+        File installed = new File(CheckVoiceData.getDataPath(storage), "af_dict");
+        File retained = new File(storage.getDir("imported_dictionaries", Context.MODE_PRIVATE),
+                installed.getName());
+        byte[] bundled = FileUtils.readBinary(installed);
+        boolean oldMarker = prefs.getBoolean(CheckVoiceData.PREF_LEGACY_IMPORTS_HANDLED, false);
+        boolean oldPreserve = prefs.getBoolean(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, true);
+        try {
+            assertFalse(retained.exists());
+            assertTrue(prefs.edit().putBoolean(CheckVoiceData.PREF_LEGACY_IMPORTS_HANDLED, true)
+                    .putBoolean(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, true).commit());
+            FileUtils.write(installed, "older bundled version".getBytes(StandardCharsets.UTF_8));
+            assertTrue(CheckVoiceData.extractVoiceData(storage));
+            assertArrayEquals(bundled, FileUtils.readBinary(installed));
+            assertFalse(retained.exists());
+        } finally {
+            prefs.edit().putBoolean(CheckVoiceData.PREF_LEGACY_IMPORTS_HANDLED, oldMarker)
+                    .putBoolean(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, oldPreserve).commit();
+            retained.delete();
+            FileUtils.write(installed, bundled);
         }
     }
 
@@ -197,6 +268,49 @@ public class SettingsRegressionTest {
         } finally {
             prefs.edit().putBoolean(EspeakApp.PREF_SHOW_LAUNCHER, old).commit();
             EspeakApp.setLauncherVisible(context, old);
+        }
+    }
+
+    @Test
+    public void dictionaryUpdateCheckboxIsAccessibleAndPersists() throws Exception {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(
+                EspeakApp.getStorageContext());
+        boolean hadSetting = prefs.contains(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES);
+        boolean oldSetting = prefs.getBoolean(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, true);
+        try {
+            prefs.edit().remove(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES).commit();
+            try (ActivityScenario<TtsSettingsActivity> screen =
+                    ActivityScenario.launch(TtsSettingsActivity.class)) {
+                waitForPreferences(screen);
+                screen.onActivity(activity -> {
+                    PreferenceFragment fragment = (PreferenceFragment) activity.getFragmentManager()
+                            .findFragmentById(android.R.id.content);
+                    CheckBoxPreference keep = (CheckBoxPreference) fragment.findPreference(
+                            EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES);
+                    assertNotNull(keep);
+                    assertEquals(activity.getString(R.string.preserve_imported_dictionaries_title),
+                            keep.getTitle());
+                    assertTrue(keep.isChecked());
+                    keep.setChecked(false);
+                    assertFalse(prefs.getBoolean(
+                            EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, true));
+                });
+                screen.recreate();
+                waitForPreferences(screen);
+                screen.onActivity(activity -> {
+                    PreferenceFragment fragment = (PreferenceFragment) activity.getFragmentManager()
+                            .findFragmentById(android.R.id.content);
+                    CheckBoxPreference keep = (CheckBoxPreference) fragment.findPreference(
+                            EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES);
+                    assertFalse(keep.isChecked());
+                });
+            }
+        } finally {
+            SharedPreferences.Editor editor = prefs.edit();
+            if (hadSetting) editor.putBoolean(
+                    EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, oldSetting);
+            else editor.remove(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES);
+            editor.commit();
         }
     }
 

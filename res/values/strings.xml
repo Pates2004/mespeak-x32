@@ -78,4 +78,6 @@
   <string name="variant_other">Other</string>
   <string name="import_voice_title">Import eSpeak dictionary</string>
   <string name="import_voice_description">Import an eSpeak voice dictionary file from the SD card.</string>
+  <string name="preserve_imported_dictionaries_title">Keep imported dictionaries on update</string>
+  <string name="preserve_imported_dictionaries_summary">On by default. When off, the next voice-data update removes imports and uses bundled dictionaries.</string>
 </resources>
