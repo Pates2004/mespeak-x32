@@ -2,7 +2,7 @@
 
 `mespeak x32` is the 32-bit Android Text-to-Speech edition of
 [`mespeak`](https://github.com/Pates2004/mespeak), based on eSpeak
-1.44.05-r32. It keeps the same TTS service, settings, JNI integration, native
+1.44.05-r33. It keeps the same TTS service, settings, JNI integration, native
 engine and current Polish dictionary as the 64-bit edition.
 
 The speech-rate dialog includes an optional Sonic time-compression boost. The
@@ -57,6 +57,12 @@ in use until the next data update; that update installs bundled dictionaries
 and discards retained import copies. The r32 data marker exercises this policy
 when updating from r31. Legacy imports are migrated at most once, including
 after Direct Boot if credential storage was initially locked.
+
+Release r33 adds an opt-in setting to ignore speech-rate multipliers requested
+by Android, TalkBack and other TTS clients. It defaults to off. The saved
+mespeak speed and optional Sonic boost continue to work when enabled. The
+voice data is unchanged from r32; both editions use the same signed release
+process and keep their previous signing lineage.
 
 This repository is intended for older 32-bit Android devices and builds:
 

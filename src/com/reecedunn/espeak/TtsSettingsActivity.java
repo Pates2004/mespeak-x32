@@ -263,6 +263,17 @@ public class TtsSettingsActivity extends PreferenceActivity {
         return pref;
     }
 
+    private static Preference createIgnoreSystemRatePreference(Context context) {
+        final CheckBoxPreference pref = new CheckBoxPreference(context);
+        pref.setKey(VoiceSettings.PREF_IGNORE_SYSTEM_RATE);
+        pref.setTitle(R.string.ignore_system_rate_title);
+        pref.setSummary(R.string.ignore_system_rate_summary);
+        pref.setPersistent(true);
+        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(storageContext);
+        pref.setChecked(prefs.getBoolean(VoiceSettings.PREF_IGNORE_SYSTEM_RATE, false));
+        return pref;
+    }
+
     private static Preference createLauncherVisibilityPreference(final Context context) {
         final CheckBoxPreference pref = new CheckBoxPreference(context);
         pref.setKey(EspeakApp.PREF_SHOW_LAUNCHER);
@@ -548,6 +559,7 @@ public class TtsSettingsActivity extends PreferenceActivity {
         group.addPreference(createVoiceVariantPreference(context, settings, R.string.espeak_variant));
         group.addPreference(createSpeakPunctuationPreference(context, settings, R.string.espeak_speak_punctuation));
         group.addPreference(createSeekBarPreference(context, engine.Rate, VoiceSettings.PREF_RATE, R.string.setting_default_rate));
+        group.addPreference(createIgnoreSystemRatePreference(context));
         group.addPreference(createSeekBarPreference(context, engine.Pitch, VoiceSettings.PREF_PITCH, R.string.setting_default_pitch));
         group.addPreference(createSeekBarPreference(context, engine.PitchRange, VoiceSettings.PREF_PITCH_RANGE, R.string.espeak_pitch_range));
         group.addPreference(createSeekBarPreference(context, engine.Volume, VoiceSettings.PREF_VOLUME, R.string.espeak_volume));

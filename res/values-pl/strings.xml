@@ -10,6 +10,8 @@
         Description: Title for the preference that controls default speech rate.-->
   <string name="setting_default_rate">Prędkość mowy</string>
   <string name="setting_rate_boost">Dodatkowe przyspieszenie (do 3×)</string>
+  <string name="ignore_system_rate_title">Używaj tylko prędkości ustawionej w mespeaku</string>
+  <string name="ignore_system_rate_summary">Domyślnie wyłączone. Po włączeniu ignoruje prędkość żądaną przez Androida, TalkBack i inne aplikacje. Suwak mespeaka i podkręcanie Sonic nadal działają.</string>
   <string name="show_launcher_title">Pokazuj mespeak na liście aplikacji</string>
   <string name="show_launcher_summary">Po wyłączeniu mespeak pozostanie dostępny w ustawieniach TTS, ale jego ikona zniknie z launchera.</string>
   <!--Source: Dialog text.

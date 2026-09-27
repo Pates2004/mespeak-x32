@@ -451,7 +451,9 @@ public class TtsService extends TextToSpeechService {
         mEngine.setVoice(voice, settings.getVoiceVariant());
 
         int rate = settings.getRate();
-        int rateScale = request.getSpeechRate();
+        // Only the caller's requested rate is optional. Keep the saved mespeak
+        // rate and the independent Sonic boost in both modes.
+        int rateScale = settings.isSystemRateIgnored() ? 100 : request.getSpeechRate();
         if (rateScale <= 0) {
             rateScale = 100;
         }

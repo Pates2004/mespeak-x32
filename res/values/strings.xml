@@ -20,6 +20,8 @@
         Description: When enabled, triples the selected speech rate.
     -->
   <string name="setting_rate_boost">Additional speed boost (up to 3x)</string>
+  <string name="ignore_system_rate_title">Use only the mespeak speech rate</string>
+  <string name="ignore_system_rate_summary">Off by default. When on, ignore speech-rate requests from Android, TalkBack and other apps; the mespeak rate and Sonic boost still work.</string>
   <string name="show_launcher_title">Show mespeak in the app list</string>
   <string name="show_launcher_summary">When disabled, mespeak remains available in TTS settings but its launcher icon is hidden.</string>
   <string name="open_system_tts_settings_title">Open text-to-speech settings</string>

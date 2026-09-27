@@ -36,6 +36,7 @@ public class VoiceSettings {
     public static final String PREF_PUNCTUATION_LEVEL = "espeak_punctuation_level";
     public static final String PREF_PUNCTUATION_CHARACTERS = "espeak_punctuation_characters";
     public static final String PREF_RATE_BOOST = "espeak_rate_boost";
+    public static final String PREF_IGNORE_SYSTEM_RATE = "espeak_ignore_system_rate";
     public static final int RATE_BOOST_MULTIPLIER = 3;
 
     public static final String PRESET_VARIANT = "variant";
@@ -174,5 +175,9 @@ public class VoiceSettings {
 
     public boolean isRateBoostEnabled() {
         return mPreferences.getBoolean(PREF_RATE_BOOST, false);
+    }
+
+    public boolean isSystemRateIgnored() {
+        return mPreferences.getBoolean(PREF_IGNORE_SYSTEM_RATE, false);
     }
 }

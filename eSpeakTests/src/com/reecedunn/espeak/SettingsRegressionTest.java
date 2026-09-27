@@ -434,4 +434,78 @@ public class SettingsRegressionTest {
             // The sample stays in this emulator app's cache, not on the phone.
         }
     }
+
+    @Test
+    public void ignoringCallerSpeedKeepsSavedRateAndIndependentSonicBoost() throws Exception {
+        Context storage = EspeakApp.getStorageContext();
+        assertTrue(CheckVoiceData.ensureVoiceData(storage));
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(storage);
+        String oldRate = prefs.getString(VoiceSettings.PREF_RATE, null);
+        boolean oldBoost = prefs.getBoolean(VoiceSettings.PREF_RATE_BOOST, false);
+        boolean oldIgnore = prefs.getBoolean(VoiceSettings.PREF_IGNORE_SYSTEM_RATE, false);
+        boolean hadBoost = prefs.contains(VoiceSettings.PREF_RATE_BOOST);
+        boolean hadIgnore = prefs.contains(VoiceSettings.PREF_IGNORE_SYSTEM_RATE);
+        CountDownLatch ready = new CountDownLatch(1);
+        AtomicInteger initStatus = new AtomicInteger(TextToSpeech.ERROR);
+        TextToSpeech tts = new TextToSpeech(context, result -> {
+            initStatus.set(result);
+            ready.countDown();
+        }, context.getPackageName());
+        File normal = new File(context.getCacheDir(), "rate-normal.wav");
+        File doubled = new File(context.getCacheDir(), "rate-doubled.wav");
+        File ignored = new File(context.getCacheDir(), "rate-ignored.wav");
+        File boosted = new File(context.getCacheDir(), "rate-boosted.wav");
+        try {
+            assertTrue(ready.await(15, TimeUnit.SECONDS));
+            assertEquals(TextToSpeech.SUCCESS, initStatus.get());
+            assertTrue(tts.setLanguage(new Locale("pl", "PL")) >= TextToSpeech.LANG_AVAILABLE);
+            String sample = "Bezinteresowny człowiek przeczytał spokojnie całe zdanie, " +
+                    "aby można było porównać długość mowy przy różnych ustawieniach.";
+            assertTrue(prefs.edit().putString(VoiceSettings.PREF_RATE, "200")
+                    .putBoolean(VoiceSettings.PREF_RATE_BOOST, false)
+                    .putBoolean(VoiceSettings.PREF_IGNORE_SYSTEM_RATE, false).commit());
+            long normalLength = synthesizeLength(tts, sample, 1.0f, normal, "normal");
+            long doubledLength = synthesizeLength(tts, sample, 2.0f, doubled, "doubled");
+            assertTrue("Client rate should change normal synthesis", doubledLength < normalLength);
+            assertTrue(prefs.edit().putBoolean(VoiceSettings.PREF_IGNORE_SYSTEM_RATE, true).commit());
+            long ignoredLength = synthesizeLength(tts, sample, 2.0f, ignored, "ignored");
+            // Sentence-final buffering can vary a few samples between runs.
+            assertTrue("Ignoring client rate must preserve the saved speed",
+                    Math.abs(normalLength - ignoredLength) <= Math.max(512L, normalLength / 200));
+            assertTrue(prefs.edit().putBoolean(VoiceSettings.PREF_RATE_BOOST, true).commit());
+            long boostedLength = synthesizeLength(tts, sample, 2.0f, boosted, "boosted");
+            assertTrue("Ignoring client rate must not disable Sonic", boostedLength < ignoredLength);
+        } finally {
+            tts.shutdown();
+            SharedPreferences.Editor restore = prefs.edit();
+            if (oldRate == null) restore.remove(VoiceSettings.PREF_RATE);
+            else restore.putString(VoiceSettings.PREF_RATE, oldRate);
+            if (hadBoost) restore.putBoolean(VoiceSettings.PREF_RATE_BOOST, oldBoost);
+            else restore.remove(VoiceSettings.PREF_RATE_BOOST);
+            if (hadIgnore) restore.putBoolean(VoiceSettings.PREF_IGNORE_SYSTEM_RATE, oldIgnore);
+            else restore.remove(VoiceSettings.PREF_IGNORE_SYSTEM_RATE);
+            restore.commit();
+            normal.delete();
+            doubled.delete();
+            ignored.delete();
+            boosted.delete();
+        }
+    }
+
+    private static long synthesizeLength(TextToSpeech tts, String text, float rate,
+                                         File file, String id) throws Exception {
+        CountDownLatch done = new CountDownLatch(1);
+        AtomicBoolean failed = new AtomicBoolean();
+        tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+            @Override public void onStart(String utteranceId) { }
+            @Override public void onDone(String utteranceId) { done.countDown(); }
+            @Override public void onError(String utteranceId) { failed.set(true); done.countDown(); }
+        });
+        assertEquals(TextToSpeech.SUCCESS, tts.setSpeechRate(rate));
+        assertEquals(TextToSpeech.SUCCESS, tts.synthesizeToFile(text, new Bundle(), file, id));
+        assertTrue("Synthesis timed out", done.await(15, TimeUnit.SECONDS));
+        assertFalse("Synthesis failed", failed.get());
+        assertTrue("Expected a WAV file", file.length() > 44);
+        return file.length();
+    }
 }
