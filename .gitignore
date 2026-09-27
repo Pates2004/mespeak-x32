@@ -2,6 +2,7 @@
 /.gradle/
 /build/
 /installfiles/
+/trash/
 /res/raw/espeakdata.zip
 /res/raw/espeakdata_version
 /local.properties
