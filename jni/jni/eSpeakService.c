@@ -183,10 +183,7 @@ static int SynthCallback(short *audioData, int numSamples,
       }
     }
     sonic_destroy_stream();
-    /* Report completion either way: espeak returns ENS_SPEECH_STOPPED without
-     * a final NULL-buffer callback when aborted, so this is the only place the
-     * Java side hears that the request is over and can call done(). */
-    (*env)->CallVoidMethod(env, object, METHOD_nativeSynthCallback, NULL);
+    /* Completion is delivered once, after nativeSynthesize returns its status. */
     return SYNTH_ABORT;
   }
 
@@ -232,8 +229,13 @@ static int SynthCallback(short *audioData, int numSamples,
         }
       }
     }
-    if (sonic_speed <= 1.0f || atomic_load(&sonic_failed)) {
+    if (atomic_load(&sonic_failed)) {
+      sonic_destroy_stream();
+      return SYNTH_ABORT;
+    }
+    if (sonic_speed <= 1.0f) {
       if (!deliver_audio(env, object, audioData, numSamples)) {
+        atomic_store(&sonic_failed, 1);
         atomic_store(&stop_requested, 1);
         return SYNTH_ABORT;
       }
@@ -431,6 +433,7 @@ JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSynthesize(
     JNIEnv *env, jobject object, jstring text, jboolean isSsml) {
   if (DEBUG) LOGV("%s", __FUNCTION__);
   const char *c_text = text ? (*env)->GetStringUTFChars(env, text, NULL) : NULL;
+  if (c_text == NULL) return JNI_FALSE;
   unsigned int unique_identifier;
 
   espeak_SetSynthCallback(SynthCallback);
@@ -448,13 +451,13 @@ JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSynthesize(
   if (c_text) (*env)->ReleaseStringUTFChars(env, text, c_text);
 
   switch (result) {
-    case EE_OK:             return JNI_TRUE;
+    case EE_OK:             return atomic_load(&sonic_failed) ? JNI_FALSE : JNI_TRUE;
     case EE_INTERNAL_ERROR: LOGE("espeak_Synth: internal error."); break;
     case EE_BUFFER_FULL:    LOGE("espeak_Synth: buffer full."); break;
     case EE_NOT_FOUND:      LOGE("espeak_Synth: not found."); break;
   }
 
-  return JNI_TRUE;
+  return JNI_FALSE;
 }
 
 JNIEXPORT jboolean
@@ -468,6 +471,18 @@ JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSetSonicRate(
     sonic_speed = 1.0f;
     espeak_SetSonicRate(0);
   }
+  return JNI_TRUE;
+}
+
+JNIEXPORT jboolean
+JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSetSmoothRate(
+    JNIEnv *env, jobject object, jint rate) {
+  // Match the Java native-rate cap. Unlike legacy boost, keep exactly the same
+  // core timing on either side of the handoff; only Sonic's factor changes.
+  const int threshold = 300;
+  if (rate > espeakRATE_MAXIMUM * 3) rate = espeakRATE_MAXIMUM * 3;
+  espeak_SetSonicRate(0);
+  sonic_speed = rate > threshold ? (float) rate / (float) threshold : 1.0f;
   return JNI_TRUE;
 }
 

@@ -115,8 +115,18 @@ finally {
 $installFiles = Join-Path $repoRoot 'installfiles'
 New-Item -ItemType Directory -Path $installFiles -Force | Out-Null
 $installerCopy = Join-Path $installFiles ([IO.Path]::GetFileName($signedApk))
-Copy-Item -LiteralPath $signedApk -Destination $installerCopy -Force
-if ((Get-FileHash -LiteralPath $signedApk).Hash -ne (Get-FileHash -LiteralPath $installerCopy).Hash) {
-    throw 'The installfiles APK copy did not match the signed build.'
+if (Test-Path -LiteralPath $installerCopy) {
+    throw 'Archive the existing version in snapshots before replacing it.'
+}
+$signedHash = (Get-FileHash -LiteralPath $signedApk).Hash
+$resolvedSigned = [IO.Path]::GetFullPath($signedApk)
+$resolvedInstaller = [IO.Path]::GetFullPath($installerCopy)
+if (-not $resolvedSigned.StartsWith($repoRoot + '\build\', [StringComparison]::OrdinalIgnoreCase) -or
+    -not $resolvedInstaller.StartsWith($repoRoot + '\installfiles\', [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'The signed APK move would leave the project artifact directories.'
+}
+Move-Item -LiteralPath $signedApk -Destination $installerCopy
+if ($signedHash -ne (Get-FileHash -LiteralPath $installerCopy).Hash) {
+    throw 'The final installfiles APK did not match the signed build.'
 }
 Write-Output $installerCopy

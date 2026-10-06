@@ -441,6 +441,7 @@ public class SettingsRegressionTest {
         assertTrue(CheckVoiceData.ensureVoiceData(storage));
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(storage);
         String oldRate = prefs.getString(VoiceSettings.PREF_RATE, null);
+        String oldMode = prefs.getString(VoiceSettings.PREF_RATE_MODE, null);
         boolean oldBoost = prefs.getBoolean(VoiceSettings.PREF_RATE_BOOST, false);
         boolean oldIgnore = prefs.getBoolean(VoiceSettings.PREF_IGNORE_SYSTEM_RATE, false);
         boolean hadBoost = prefs.contains(VoiceSettings.PREF_RATE_BOOST);
@@ -462,6 +463,7 @@ public class SettingsRegressionTest {
             String sample = "Bezinteresowny człowiek przeczytał spokojnie całe zdanie, " +
                     "aby można było porównać długość mowy przy różnych ustawieniach.";
             assertTrue(prefs.edit().putString(VoiceSettings.PREF_RATE, "200")
+                    .putString(VoiceSettings.PREF_RATE_MODE, VoiceSettings.RATE_MODE_STANDARD)
                     .putBoolean(VoiceSettings.PREF_RATE_BOOST, false)
                     .putBoolean(VoiceSettings.PREF_IGNORE_SYSTEM_RATE, false).commit());
             long normalLength = synthesizeLength(tts, sample, 1.0f, normal, "normal");
@@ -472,7 +474,8 @@ public class SettingsRegressionTest {
             // Sentence-final buffering can vary a few samples between runs.
             assertTrue("Ignoring client rate must preserve the saved speed",
                     Math.abs(normalLength - ignoredLength) <= Math.max(512L, normalLength / 200));
-            assertTrue(prefs.edit().putBoolean(VoiceSettings.PREF_RATE_BOOST, true).commit());
+            assertTrue(prefs.edit().putBoolean(VoiceSettings.PREF_RATE_BOOST, true)
+                    .putString(VoiceSettings.PREF_RATE_MODE, VoiceSettings.RATE_MODE_BOOST).commit());
             long boostedLength = synthesizeLength(tts, sample, 2.0f, boosted, "boosted");
             assertTrue("Ignoring client rate must not disable Sonic", boostedLength < ignoredLength);
         } finally {
@@ -480,6 +483,8 @@ public class SettingsRegressionTest {
             SharedPreferences.Editor restore = prefs.edit();
             if (oldRate == null) restore.remove(VoiceSettings.PREF_RATE);
             else restore.putString(VoiceSettings.PREF_RATE, oldRate);
+            if (oldMode == null) restore.remove(VoiceSettings.PREF_RATE_MODE);
+            else restore.putString(VoiceSettings.PREF_RATE_MODE, oldMode);
             if (hadBoost) restore.putBoolean(VoiceSettings.PREF_RATE_BOOST, oldBoost);
             else restore.remove(VoiceSettings.PREF_RATE_BOOST);
             if (hadIgnore) restore.putBoolean(VoiceSettings.PREF_IGNORE_SYSTEM_RATE, oldIgnore);

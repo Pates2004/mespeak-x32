@@ -1,5 +1,10 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
+  <string name="app_theme_title">Motyw</string>
+  <string name="app_theme_system">Zgodny z systemem</string>
+  <string name="app_theme_light">Jasny</string>
+  <string name="app_theme_dark">Ciemny</string>
+  <string name="show_usage_hints_title">Pokazuj podpowiedzi</string>
   <!--Source: Activity title.
         Description: Title for the Settings activity.-->
   <string name="tts_settings_label">Ustawienia zamiany tekstu na mowę eSpeak</string>
@@ -9,7 +14,12 @@
   <!--Source: Preference title.
         Description: Title for the preference that controls default speech rate.-->
   <string name="setting_default_rate">Prędkość mowy</string>
-  <string name="setting_rate_boost">Dodatkowe przyspieszenie (do 3×)</string>
+  <string name="setting_rate_mode">Tryb regulacji prędkości</string>
+  <string name="rate_mode_smooth">Płynny</string>
+  <string name="rate_mode_standard">Standardowy</string>
+  <string name="rate_mode_boost">Podkręcanie ×3</string>
+  <string name="rate_mode_help">Płynny: 80–1350 SNM, z Sonikiem powyżej 300 SNM. Standardowy: 80–450 SNM. Podkręcanie: 240–1350 SNM. Zmiana trybu zachowuje bieżącą prędkość, jeśli pozwala na to jego zakres.</string>
+  <string name="rate_mode_save_error">Nie udało się zapisać trybu prędkości. Spróbuj ponownie.</string>
   <string name="ignore_system_rate_title">Używaj tylko prędkości ustawionej w mespeaku</string>
   <string name="ignore_system_rate_summary">Domyślnie wyłączone. Po włączeniu ignoruje prędkość żądaną przez Androida, TalkBack i inne aplikacje. Suwak mespeaka i podkręcanie Sonic nadal działają.</string>
   <string name="show_launcher_title">Pokazuj mespeak na liście aplikacji</string>

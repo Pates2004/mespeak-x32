@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+  <string name="app_theme_title">Theme</string>
+  <string name="app_theme_system">Follow system</string>
+  <string name="app_theme_light">Light</string>
+  <string name="app_theme_dark">Dark</string>
+  <string name="show_usage_hints_title">Show usage hints</string>
   <!--
         Source: Activity title.
         Description: Title for the Settings activity.
@@ -15,11 +20,12 @@
         Description: Title for the preference that controls default speech rate.
     -->
   <string name="setting_default_rate">Speech rate</string>
-  <!--
-        Source: Checkbox label.
-        Description: When enabled, triples the selected speech rate.
-    -->
-  <string name="setting_rate_boost">Additional speed boost (up to 3x)</string>
+  <string name="setting_rate_mode">Speech-rate mode</string>
+  <string name="rate_mode_smooth">Smooth</string>
+  <string name="rate_mode_standard">Standard</string>
+  <string name="rate_mode_boost">Boost ×3</string>
+  <string name="rate_mode_help">Smooth: 80–1350 WPM, with Sonic above 300 WPM. Standard: 80–450 WPM. Boost: 240–1350 WPM. Changing modes preserves the current speed where possible.</string>
+  <string name="rate_mode_save_error">The speech-rate mode could not be saved. Please try again.</string>
   <string name="ignore_system_rate_title">Use only the mespeak speech rate</string>
   <string name="ignore_system_rate_summary">Off by default. When on, ignore speech-rate requests from Android, TalkBack and other apps; the mespeak rate and Sonic boost still work.</string>
   <string name="show_launcher_title">Show mespeak in the app list</string>

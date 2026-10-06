@@ -29,8 +29,6 @@ import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -41,7 +39,6 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
 {
     private SeekBar mSeekBar;
     private TextView mValueText;
-    private CheckBox mRateBoost;
 
     private int mOldProgress = 0;
     private int mProgress = 0;
@@ -49,15 +46,13 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
     private int mMin = 0;
     private int mMax = 100;
     private String mFormatter = "%s";
-    private boolean mRateBoostEnabled = false;
-    private String mRateBoostKey = null;
-    private boolean mOldRateBoost = false;
-    private boolean mDialogAccepted = false;
+    private String mRateMode = null;
 
     public void setProgress(int progress) {
-        mProgress = progress;
+        mProgress = Math.max(mMin, Math.min(mMax, progress));
         String text = Integer.toString(mProgress);
         callChangeListener(text);
+        setSummary(formatValue(mProgress));
 
         // Update the last saved value to the so it can be restored later if
         // the user cancels the dialog. This needs to be done here as well
@@ -103,9 +98,24 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
         return mFormatter;
     }
 
-    public void enableRateBoost(String key) {
-        mRateBoostEnabled = true;
-        mRateBoostKey = key;
+    public void setRateMode(String mode) {
+        mRateMode = mode;
+        setMin(VoiceSettings.RATE_MINIMUM);
+        setMax(VoiceSettings.getRateSliderMaximum(mode));
+    }
+
+    public String formatValue(int value) {
+        final int displayValue = mRateMode == null ? Math.max(mMin, Math.min(mMax, value))
+                : VoiceSettings.getRateDisplayValue(mRateMode, value);
+        return String.format(getFormatter(), Integer.toString(displayValue));
+    }
+
+    public String formatValue(String value) {
+        try {
+            return formatValue(Integer.parseInt(value));
+        } catch (NumberFormatException error) {
+            return formatValue(mProgress);
+        }
     }
 
     public SeekBarPreference(Context context, AttributeSet attrs, int defStyle)
@@ -128,9 +138,10 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
     }
 
     private void persistSettings(int progress) {
-        mProgress = progress;
+        mProgress = Math.max(mMin, Math.min(mMax, progress));
         String text = Integer.toString(mProgress);
         callChangeListener(text);
+        setSummary(formatValue(mProgress));
         if (shouldCommit()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
             {
@@ -148,7 +159,6 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
         View root = super.onCreateDialogView();
         mSeekBar = (SeekBar)root.findViewById(R.id.seekBar);
         mValueText = (TextView)root.findViewById(R.id.valueText);
-        mRateBoost = (CheckBox)root.findViewById(R.id.rateBoost);
 
         Button reset = (Button)root.findViewById(R.id.resetToDefault);
         reset.setOnClickListener(new View.OnClickListener(){
@@ -165,37 +175,16 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
             }
         });
 
-        if (mRateBoost != null) {
-            mRateBoost.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    updateValueText();
-                    persistRateBoost(isChecked);
-                }
-            });
-        }
         return root;
     }
 
     @Override
     protected void onBindDialogView(View view) {
         super.onBindDialogView(view);
-        mDialogAccepted = false;
         mSeekBar.setOnSeekBarChangeListener(this);
         mSeekBar.setMax(mMax - mMin);
         mSeekBar.setProgress(mProgress - mMin);
         attachRotaryEncoder(mSeekBar);
-
-        if (mRateBoost != null) {
-            if (!mRateBoostEnabled) {
-                mRateBoost.setVisibility(View.GONE);
-            } else {
-                SharedPreferences prefs = getDeviceProtectedPreferences();
-                boolean enabled = prefs.getBoolean(mRateBoostKey, false);
-                mRateBoost.setChecked(enabled);
-                mOldRateBoost = enabled;
-            }
-        }
 
         // Update the last saved value to the so it can be restored later if
         // the user cancels the dialog.
@@ -211,7 +200,6 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
                 // Update the last saved value so this will be persisted when
                 // the dialog is dismissed.
 
-                mDialogAccepted = true;
                 mOldProgress = mSeekBar.getProgress() + mMin;
                 break;
         }
@@ -236,13 +224,10 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
         // 2.  In all cases, the last saved value is persisted when the dialog
         //     is closed (in this onDismiss handler).
 
-        persistSettings(mOldProgress);
-        if (mRateBoostEnabled) {
-            boolean rateBoostValue = mOldRateBoost;
-            if (mDialogAccepted && mRateBoost != null) {
-                rateBoostValue = mRateBoost.isChecked();
-            }
-            persistRateBoost(rateBoostValue);
+        try {
+            persistSettings(mOldProgress);
+        } finally {
+            super.onDismiss(dialog);
         }
     }
 
@@ -257,6 +242,9 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
         // onBindDialogView handler).
 
         updateValueText();
+        if (fromUser && !seekBar.isPressed()) {
+            persistSettings(progress + mMin);
+        }
     }
 
     @Override
@@ -297,6 +285,7 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
                 int updated = Math.max(0, Math.min(range, seekBar.getProgress() + delta));
                 if (updated != seekBar.getProgress()) {
                     seekBar.setProgress(updated);
+                    persistSettings(updated + mMin);
                     v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
                 }
                 return true;
@@ -307,21 +296,6 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
         seekBar.requestFocus();
     }
 
-    private void persistRateBoost(boolean enabled) {
-        if (!mRateBoostEnabled || mRateBoostKey == null) return;
-
-        SharedPreferences prefs = getDeviceProtectedPreferences();
-        prefs.edit().putBoolean(mRateBoostKey, enabled).apply();
-    }
-
-    private SharedPreferences getDeviceProtectedPreferences() {
-        Context context = getContext();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            context = context.createDeviceProtectedStorageContext();
-        }
-        return PreferenceManager.getDefaultSharedPreferences(context);
-    }
-
     private int getDisplayValue() {
         int value = mMin;
         if (mSeekBar != null) {
@@ -329,18 +303,13 @@ public class SeekBarPreference extends DialogPreference implements SeekBar.OnSee
         } else {
             value = mProgress;
         }
-        if (mRateBoostEnabled && mRateBoost != null && mRateBoost.isChecked()) {
-            value = value * VoiceSettings.RATE_BOOST_MULTIPLIER;
-            int boostedMax = mMax * VoiceSettings.RATE_BOOST_MULTIPLIER;
-            if (value > boostedMax) value = boostedMax;
-        }
         return value;
     }
 
     private void updateValueText() {
         if (mValueText == null) return;
         int displayValue = getDisplayValue();
-        String text = String.format(getFormatter(), Integer.toString(displayValue));
+        String text = formatValue(displayValue);
         mValueText.setText(text);
         if (mSeekBar != null) {
             mSeekBar.setContentDescription(text);

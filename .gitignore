@@ -3,6 +3,9 @@
 /build/
 /installfiles/
 /trash/
+/Workspace/
+/snapshots/
+/Forme/
 /res/raw/espeakdata.zip
 /res/raw/espeakdata_version
 /local.properties

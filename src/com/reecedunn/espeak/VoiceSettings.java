@@ -36,8 +36,16 @@ public class VoiceSettings {
     public static final String PREF_PUNCTUATION_LEVEL = "espeak_punctuation_level";
     public static final String PREF_PUNCTUATION_CHARACTERS = "espeak_punctuation_characters";
     public static final String PREF_RATE_BOOST = "espeak_rate_boost";
+    public static final String PREF_RATE_MODE = "espeak_rate_mode";
     public static final String PREF_IGNORE_SYSTEM_RATE = "espeak_ignore_system_rate";
     public static final int RATE_BOOST_MULTIPLIER = 3;
+    public static final String RATE_MODE_SMOOTH = "smooth";
+    public static final String RATE_MODE_STANDARD = "standard";
+    public static final String RATE_MODE_BOOST = "boost";
+    public static final int RATE_MINIMUM = 80;
+    public static final int RATE_NORMAL_MAXIMUM = 450;
+    public static final int RATE_SMOOTH_MAXIMUM = RATE_NORMAL_MAXIMUM * RATE_BOOST_MULTIPLIER;
+    public static final int RATE_SMOOTH_THRESHOLD = 300;
 
     public static final String PRESET_VARIANT = "variant";
     public static final String PRESET_RATE = "rate";
@@ -54,6 +62,7 @@ public class VoiceSettings {
     public VoiceSettings(SharedPreferences preferences, SpeechSynthesis engine) {
         mPreferences = preferences;
         mEngine = engine;
+        migrateRateMode(preferences);
     }
 
     public VoiceVariant getVoiceVariant() {
@@ -69,26 +78,128 @@ public class VoiceSettings {
     }
 
     public int getRate() {
-        int min = mEngine.Rate.getMinValue();
-        int max = mEngine.Rate.getMaxValue();
+        return getRateDisplayValue(getRateMode(mPreferences),
+                getRateSliderValue(mPreferences, mEngine.Rate.getDefaultValue()));
+    }
 
-        int rate = getPreferenceValue(PREF_RATE, Integer.MIN_VALUE);
-        if (rate == Integer.MIN_VALUE) {
-            rate = (int)((float)getPreferenceValue(PREF_DEFAULT_RATE, 100) / 100 * (float)mEngine.Rate.getDefaultValue());
+    public int getRateForCaller(int requestedPercent) {
+        return getRateForCaller(mPreferences, mEngine.Rate.getDefaultValue(), requestedPercent);
+    }
+
+    public static int getRateForCaller(SharedPreferences preferences, int defaultValue,
+                                       int requestedPercent) {
+        final String mode = getRateMode(preferences);
+        final int savedRate = getRateDisplayValue(mode, getRateSliderValue(preferences, defaultValue));
+        final int scale = getBooleanPreference(preferences, PREF_IGNORE_SYSTEM_RATE, false)
+                || requestedPercent <= 0 ? 100 : requestedPercent;
+        final long scaledRate = ((long) savedRate * scale) / 100;
+        final int maximum = RATE_MODE_STANDARD.equals(mode) ? RATE_NORMAL_MAXIMUM : RATE_SMOOTH_MAXIMUM;
+        return clampRate(scaledRate, RATE_MINIMUM, maximum);
+    }
+
+    public static synchronized void migrateRateMode(SharedPreferences preferences) {
+        final String currentMode = getStringPreference(preferences, PREF_RATE_MODE, null);
+        if (isRateMode(currentMode)) return;
+        final boolean legacyRate = preferences.contains(PREF_RATE)
+                || preferences.contains(PREF_DEFAULT_RATE) || preferences.contains(PREF_RATE_BOOST);
+        final boolean legacyBoost = getBooleanPreference(preferences, PREF_RATE_BOOST, false);
+        String mode = legacyBoost ? RATE_MODE_BOOST
+                : legacyRate ? RATE_MODE_STANDARD : RATE_MODE_SMOOTH;
+        final SharedPreferences.Editor migration = preferences.edit();
+        if (legacyBoost) {
+            final long legacyPercent = Math.max(0L, Math.min(1000000L,
+                    getRatePreferenceValue(preferences, PREF_DEFAULT_RATE, 100)));
+            final long base = getRatePreferenceValue(preferences, PREF_RATE, legacyPercent * 175 / 100);
+            if (base < RATE_MINIMUM) {
+                // Old imported percentages could encode boost below its slider
+                // range. Smooth uses identical native timing at those speeds.
+                mode = RATE_MODE_SMOOTH;
+                final int effective = clampRate(Math.max(0L, base) * RATE_BOOST_MULTIPLIER,
+                        RATE_MINIMUM, RATE_SMOOTH_MAXIMUM);
+                migration.putString(PREF_RATE, Integer.toString(effective));
+            }
         }
+        migration.putString(PREF_RATE_MODE, mode)
+                .putBoolean(PREF_RATE_BOOST, RATE_MODE_BOOST.equals(mode)).commit();
+    }
 
-        if (isRateBoostEnabled()) {
-            // Allow values beyond the normal espeakRATE_MAXIMUM; the JNI
-            // layer applies Sonic time compression to the clamped PCM.
-            rate = rate * RATE_BOOST_MULTIPLIER;
-            int boostedMax = max * RATE_BOOST_MULTIPLIER; // keep within a sensible upper bound
-            if (rate > boostedMax) rate = boostedMax;
-        } else if (rate > max) {
-            rate = max;
+    public static String getRateMode(SharedPreferences preferences) {
+        String mode = getStringPreference(preferences, PREF_RATE_MODE, null);
+        if (!isRateMode(mode)) {
+            migrateRateMode(preferences);
+            mode = getStringPreference(preferences, PREF_RATE_MODE, RATE_MODE_SMOOTH);
         }
+        return mode;
+    }
 
-        if (rate < min) rate = min;
-        return rate;
+    public static boolean setRateMode(SharedPreferences preferences, String mode, int defaultValue) {
+        if (!isRateMode(mode)) throw new IllegalArgumentException("Unknown speech-rate mode: " + mode);
+        final String previousMode = getRateMode(preferences);
+        final int previousRate = getRateSliderValue(preferences, defaultValue);
+        final int effectiveRate = getRateDisplayValue(previousMode, previousRate);
+        final int storedRate = RATE_MODE_BOOST.equals(mode)
+                ? (effectiveRate + RATE_BOOST_MULTIPLIER / 2) / RATE_BOOST_MULTIPLIER : effectiveRate;
+        return preferences.edit().putString(PREF_RATE_MODE, mode)
+                .putString(PREF_RATE, Integer.toString(clampRate(storedRate,
+                        RATE_MINIMUM, getRateSliderMaximum(mode))))
+                .putBoolean(PREF_RATE_BOOST, RATE_MODE_BOOST.equals(mode)).commit();
+    }
+
+    public static int getRateSliderMaximum(String mode) {
+        return RATE_MODE_SMOOTH.equals(mode) ? RATE_SMOOTH_MAXIMUM : RATE_NORMAL_MAXIMUM;
+    }
+
+    public static int getRateSliderValue(SharedPreferences preferences, int defaultValue) {
+        final String mode = getRateMode(preferences);
+        final int safeDefault = clampRate(defaultValue, RATE_MINIMUM, RATE_NORMAL_MAXIMUM);
+        final long legacyPercent = Math.max(0L, Math.min(1000000L,
+                getRatePreferenceValue(preferences, PREF_DEFAULT_RATE, 100)));
+        final long fallback = (legacyPercent * safeDefault) / 100;
+        return clampRate(getRatePreferenceValue(preferences, PREF_RATE, fallback),
+                RATE_MINIMUM, getRateSliderMaximum(mode));
+    }
+
+    public static int getRateDisplayValue(String mode, int sliderValue) {
+        final int boundedValue = clampRate(sliderValue, RATE_MINIMUM, getRateSliderMaximum(mode));
+        return RATE_MODE_BOOST.equals(mode) ? boundedValue * RATE_BOOST_MULTIPLIER : boundedValue;
+    }
+
+    private static int clampRate(long value, int minimum, int maximum) {
+        return (int) Math.max(minimum, Math.min((long) maximum, value));
+    }
+
+    private static boolean isRateMode(String mode) {
+        return RATE_MODE_SMOOTH.equals(mode) || RATE_MODE_STANDARD.equals(mode) || RATE_MODE_BOOST.equals(mode);
+    }
+
+    private static long getRatePreferenceValue(SharedPreferences preferences, String key, long fallback) {
+        final String value = getStringPreference(preferences, key, null);
+        if (value == null) return fallback;
+        final String trimmed = value.trim();
+        try {
+            return Long.parseLong(trimmed);
+        } catch (NumberFormatException error) {
+            if (trimmed.matches("[+-]?[0-9]+")) {
+                return trimmed.startsWith("-") ? Long.MIN_VALUE : Long.MAX_VALUE;
+            }
+            return fallback;
+        }
+    }
+
+    private static String getStringPreference(SharedPreferences preferences, String key, String fallback) {
+        try {
+            return preferences.getString(key, fallback);
+        } catch (ClassCastException error) {
+            return fallback;
+        }
+    }
+
+    private static boolean getBooleanPreference(SharedPreferences preferences, String key, boolean fallback) {
+        try {
+            return preferences.getBoolean(key, fallback);
+        } catch (ClassCastException error) {
+            return fallback;
+        }
     }
 
     public int getPitch() {
@@ -174,10 +285,14 @@ public class VoiceSettings {
     }
 
     public boolean isRateBoostEnabled() {
-        return mPreferences.getBoolean(PREF_RATE_BOOST, false);
+        return RATE_MODE_BOOST.equals(getRateMode(mPreferences));
+    }
+
+    public boolean isSmoothRateEnabled() {
+        return RATE_MODE_SMOOTH.equals(getRateMode(mPreferences));
     }
 
     public boolean isSystemRateIgnored() {
-        return mPreferences.getBoolean(PREF_IGNORE_SYSTEM_RATE, false);
+        return getBooleanPreference(mPreferences, PREF_IGNORE_SYSTEM_RATE, false);
     }
 }

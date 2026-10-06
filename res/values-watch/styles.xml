@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="android:Theme.DeviceDefault.NoActionBar">
+    <style name="AppTheme" parent="AppThemeLight">
+    </style>
+    <style name="AppThemeLight" parent="android:Theme.DeviceDefault.Light.NoActionBar">
+    </style>
+    <style name="AppThemeDark" parent="android:Theme.DeviceDefault.NoActionBar">
     </style>
 </resources>

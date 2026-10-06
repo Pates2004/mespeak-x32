@@ -17,6 +17,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.reecedunn.espeak.R;
+import com.reecedunn.espeak.AppearanceSettings;
 
 import java.util.Locale;
 
@@ -61,14 +62,21 @@ public final class SpeechPreviewPreference extends Preference {
         editor.addTextChangedListener(watcher);
         editor.setTag(watcher);
         statusView = view.findViewById(R.id.preview_status);
-        statusView.setText(status);
+        updateStatusView();
         view.findViewById(R.id.preview_speak).setOnClickListener(v -> speak());
         view.findViewById(R.id.preview_stop).setOnClickListener(v -> shutdown());
     }
 
     private void setStatus(int message) {
         status = message;
-        if (statusView != null) statusView.setText(message);
+        updateStatusView();
+    }
+
+    private void updateStatusView() {
+        if (statusView == null) return;
+        boolean hidden = status == R.string.preview_ready && !AppearanceSettings.areHintsEnabled();
+        statusView.setVisibility(hidden ? View.GONE : View.VISIBLE);
+        statusView.setText(hidden ? "" : getContext().getString(status));
     }
 
     private void speak() {

@@ -75,6 +75,7 @@ public class CheckVoiceData extends Activity {
         "dd07b632b200f42c100bb3c0481aacc309c406cd",
         "ee98069936bdb9c1e098af8cbbb504cbc4b4bfc7",
         "a1160dfdbdf5df60815391d81e67ac9d682af25e",
+        "068f7cbff5f1f8a013018c9a4bf7e04a85965762",
     };
 
     public static File getDataPath(Context context) {

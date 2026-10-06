@@ -31,7 +31,13 @@ public class DownloadVoiceData extends Activity {
     private AsyncExtract mAsyncExtract;
 
     @Override
+    protected void attachBaseContext(Context context) {
+        super.attachBaseContext(AppearanceSettings.localizedContext(context));
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
+        AppearanceSettings.applyTheme(this);
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.download_voice_data);

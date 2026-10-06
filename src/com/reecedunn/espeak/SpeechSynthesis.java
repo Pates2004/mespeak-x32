@@ -234,7 +234,8 @@ public class SpeechSynthesis {
         }
 
         public void setValue(int value, int scale) {
-            setValue((value * scale) / 100);
+            final long scaled = ((long) value * scale) / 100;
+            setValue((int) Math.max(min, Math.min((long) max, scaled)));
         }
 
         public void setValue(int value) {
@@ -261,13 +262,22 @@ public class SpeechSynthesis {
     /** Which punctuation characters to announce. */
     public final Parameter Punctuation = new Parameter(5, 0, 2, UnitType.Punctuation);
 
-    public void synthesize(String text, boolean isSsml) {
-        nativeSynthesize(text, isSsml);
+    public boolean synthesize(String text, boolean isSsml) {
+        // Native synthesis is synchronous. Complete only after its final status
+        // is known, so a failed Sonic flush cannot look like a successful call.
+        final boolean success = nativeSynthesize(text, isSsml);
+        if (success && mCallback != null) mCallback.onSynthDataComplete();
+        return success;
     }
 
     /** Selects clarity-oriented core timing and Sonic compression above 450 WPM. */
     public void setSonicRate(int rate) {
         nativeSetSonicRate(rate);
+    }
+
+    /** Keeps native articulation unchanged at the smooth-mode handoff. */
+    public void setSmoothRate(int rate) {
+        nativeSetSmoothRate(rate);
     }
 
     public void stop() {
@@ -278,9 +288,7 @@ public class SpeechSynthesis {
         if (mCallback == null)
             return;
 
-        if (audioData == null) {
-            mCallback.onSynthDataComplete();
-        } else {
+        if (audioData != null) {
             mCallback.onSynthDataReady(audioData);
         }
     }
@@ -366,6 +374,8 @@ public class SpeechSynthesis {
     private native final boolean nativeSynthesize(String text, boolean isSsml);
 
     private native final boolean nativeSetSonicRate(int rate);
+
+    private native final boolean nativeSetSmoothRate(int rate);
 
     private native final boolean nativeStop();
 

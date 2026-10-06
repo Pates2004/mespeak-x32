@@ -450,30 +450,23 @@ public class TtsService extends TextToSpeechService {
         final VoiceSettings settings = new VoiceSettings(PreferenceManager.getDefaultSharedPreferences(storageContext), mEngine);
         mEngine.setVoice(voice, settings.getVoiceVariant());
 
-        int rate = settings.getRate();
-        // Only the caller's requested rate is optional. Keep the saved mespeak
-        // rate and the independent Sonic boost in both modes.
-        int rateScale = settings.isSystemRateIgnored() ? 100 : request.getSpeechRate();
-        if (rateScale <= 0) {
-            rateScale = 100;
-        }
-        rate = (int)(((long)rate * rateScale) / 100);
+        final int rate = settings.getRateForCaller(request.getSpeechRate());
         final int normalMaximum = mEngine.Rate.getMaxValue();
-        final int boostedMaximum = normalMaximum * VoiceSettings.RATE_BOOST_MULTIPLIER;
-        if (settings.isRateBoostEnabled()) {
-            if (rate > boostedMaximum) rate = boostedMaximum;
-        } else if (rate > normalMaximum) {
-            rate = normalMaximum;
+        if (settings.isSmoothRateEnabled()) {
+            mEngine.Rate.setValue(Math.min(rate, VoiceSettings.RATE_SMOOTH_THRESHOLD));
+            mEngine.setSmoothRate(rate);
+        } else {
+            mEngine.Rate.setValue(Math.min(rate, normalMaximum));
+            mEngine.setSonicRate(settings.isRateBoostEnabled() && rate > normalMaximum ? rate : 0);
         }
-        if (rate < mEngine.Rate.getMinValue()) rate = mEngine.Rate.getMinValue();
-        mEngine.Rate.setValue(Math.min(rate, normalMaximum));
-        mEngine.setSonicRate(settings.isRateBoostEnabled() && rate > normalMaximum ? rate : 0);
         mEngine.Pitch.setValue(settings.getPitch(), request.getPitch());
         mEngine.PitchRange.setValue(settings.getPitchRange());
         mEngine.Volume.setValue(settings.getVolume());
         mEngine.Punctuation.setValue(settings.getPunctuationLevel());
         mEngine.setPunctuationCharacters(settings.getPunctuationCharacters());
-        mEngine.synthesize(text, text.startsWith("<speak"));
+        if (!mEngine.synthesize(text, text.startsWith("<speak"))) {
+            reportError(callback, TextToSpeech.ERROR_SYNTHESIS);
+        }
     }
 
     protected void rebuildAvailableVoices() {

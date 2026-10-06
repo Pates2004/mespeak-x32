@@ -1,14 +1,32 @@
 # mespeak x32
 
+[Polska dokumentacja](README.pl.md)
+
 `mespeak x32` is the 32-bit Android Text-to-Speech edition of
 [`mespeak`](https://github.com/Pates2004/mespeak), based on eSpeak
-1.44.05-r33. It keeps the same TTS service, settings, JNI integration, native
+1.44.05-r34. It keeps the same TTS service, settings, JNI integration, native
 engine and current Polish dictionary as the 64-bit edition.
 
-The speech-rate dialog includes an optional Sonic time-compression boost. The
-normal eSpeak rate remains unchanged; above 450 WPM the legacy core uses the
-clarity-oriented timing model from eSpeak NG before Sonic performs the
-remaining pitch-preserving compression.
+The speech-rate settings offer smooth, standard and Sonic x3 modes. Smooth
+mode spans 80-1350 WPM, uses native synthesis up to 300 WPM, and retains the
+same native articulation above that point while Sonic gradually compresses
+the audio. Fresh installations default to smooth. Existing standard/boost
+settings retain their effective speed and mode. An older boosted preference
+below the current base-rate minimum migrates to smooth to preserve its
+effective speed instead of increasing it. Changing modes preserves
+the speed where it fits the selected range. Standard and x3 retain the
+previous engine behavior. The independent option to ignore Android's caller
+rate multiplier remains available.
+
+Appearance follows the system by default, with explicit light and dark
+overrides. The primary system language selects Polish only when it is Polish;
+all other primary languages select English. Optional usage hints can be hidden
+without removing essential labels, setting values, errors or warnings.
+
+The r34 Polish data uses fuller pronunciation for the `pierwsz-`, `sześćset`,
+`pięćdziesiąt`, `sześćdziesiąt` and `dziewięćdziesiąt` families, including
+numeric forms. Updates retain imported dictionaries according to the existing
+preservation setting. Final signed release APKs belong in `installfiles`.
 
 The installed application is labelled `mespeak`, like the 64-bit edition. Its
 settings interface follows the system language in Polish and uses English for
@@ -41,7 +59,8 @@ the current mespeak settings without changing Android's default engine.
 The native core and voice catalog are initialized once per process, so opening
 Settings or checking voice data does not reset a running synthesis. In r30,
 voice data was unchanged since r29 and kept its then-current marker. Signed APKs
-are also copied to `installfiles` by `build-release.ps1`.
+are placed in `installfiles` by `build-release.ps1`, without retaining an
+identical signed copy in the build directory.
 
 Release r31 updates the Polish dictionary to keep `ci` in forms such as
 *druciana*, *bociana*, *starcia* and *tarcia*. The native speech behavior and

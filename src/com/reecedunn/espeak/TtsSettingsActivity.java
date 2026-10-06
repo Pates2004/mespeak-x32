@@ -69,15 +69,21 @@ public class TtsSettingsActivity extends PreferenceActivity {
     private static final java.util.HashMap<String, LangInfo> sLangInfo = new java.util.HashMap<String, LangInfo>();
 
     @Override
+    protected void attachBaseContext(Context context) {
+        super.attachBaseContext(AppearanceSettings.localizedContext(context));
+    }
+
+    @Override
     @SuppressWarnings("deprecation")
     protected void onCreate(Bundle savedInstanceState) {
         // Restored fragments can start loading during super.onCreate().
         storageContext = EspeakApp.getStorageContext();
-        super.onCreate(savedInstanceState);
-        setTaskDescription(new ActivityManager.TaskDescription(getString(R.string.app_name)));
         if (savedInstanceState != null) {
             previewText = savedInstanceState.getString("preview_text");
         }
+        AppearanceSettings.applyTheme(this);
+        super.onCreate(savedInstanceState);
+        setTaskDescription(new ActivityManager.TaskDescription(getString(R.string.app_name)));
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
         {
@@ -88,6 +94,7 @@ public class TtsSettingsActivity extends PreferenceActivity {
 
         storageContext = EspeakApp.getStorageContext();
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(storageContext);
+        VoiceSettings.migrateRateMode(prefs);
         final SharedPreferences.Editor editor = prefs.edit();
 
         String pitch = prefs.getString(VoiceSettings.PREF_PITCH, null);
@@ -98,19 +105,9 @@ public class TtsSettingsActivity extends PreferenceActivity {
             editor.putString(VoiceSettings.PREF_PITCH, Integer.toString(pitchValue));
         }
 
-        String rate = prefs.getString(VoiceSettings.PREF_RATE, null);
-        if (rate == null) {
-            // Try the old eyes-free setting:
-            // Data is installed on the worker before native initialization.
-            int defaultValue = 175;
-            int maxValue = 450;
-
-            rate = prefs.getString(VoiceSettings.PREF_DEFAULT_RATE, "100");
-            int rateValue = (int) Math.min(maxValue,
-                    ((long) parseLegacyNumber(rate, 100) * defaultValue) / 100);
-            if (rateValue < defaultValue) rateValue = defaultValue;
-            if (rateValue > maxValue) rateValue = maxValue;
-            editor.putString(VoiceSettings.PREF_RATE, Integer.toString(rateValue));
+        if (!prefs.contains(VoiceSettings.PREF_RATE)) {
+            editor.putString(VoiceSettings.PREF_RATE,
+                    Integer.toString(VoiceSettings.getRateSliderValue(prefs, 175)));
         }
 
         String variant = prefs.getString(VoiceSettings.PREF_VARIANT, null);
@@ -178,7 +175,7 @@ public class TtsSettingsActivity extends PreferenceActivity {
         pref.setTitle(title);
         pref.setDialogTitle(title);
         pref.setOnPreferenceChangeListener(mOnPreferenceChanged);
-        pref.setDescription(R.string.import_voice_description);
+        AppearanceSettings.setOptionalSummary(pref, R.string.import_voice_description);
         return pref;
     }
 
@@ -206,7 +203,7 @@ public class TtsSettingsActivity extends PreferenceActivity {
         return pref;
     }
 
-    private static Preference createSeekBarPreference(Context context, SpeechSynthesis.Parameter parameter, String key, int titleRes) {
+    private static SeekBarPreference createSeekBarPreference(Context context, SpeechSynthesis.Parameter parameter, String key, int titleRes) {
         final String title = context.getString(titleRes);
         final int defaultValue = parameter.getDefaultValue();
 
@@ -216,10 +213,6 @@ public class TtsSettingsActivity extends PreferenceActivity {
         pref.setKey(key);
         pref.setOnPreferenceChangeListener(mOnPreferenceChanged);
         pref.setPersistent(true);
-
-        if (VoiceSettings.PREF_RATE.equals(key)) {
-            pref.enableRateBoost(VoiceSettings.PREF_RATE_BOOST);
-        }
 
         switch (parameter.getUnitType())
         {
@@ -238,6 +231,11 @@ public class TtsSettingsActivity extends PreferenceActivity {
         pref.setDefaultValue(defaultValue);
 
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(storageContext);
+        if (VoiceSettings.PREF_RATE.equals(key)) {
+            pref.setRateMode(VoiceSettings.getRateMode(prefs));
+            pref.setProgress(VoiceSettings.getRateSliderValue(prefs, defaultValue));
+            return pref;
+        }
         final String prefString = prefs.getString(key, null);
         if (prefString == null) {
             pref.setProgress(defaultValue);
@@ -247,6 +245,43 @@ public class TtsSettingsActivity extends PreferenceActivity {
         }
 
         return pref;
+    }
+
+    private static Preference createRateModePreference(Context context, SeekBarPreference rate,
+                                                        int defaultValue) {
+        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(storageContext);
+        final ListPreference mode = new ListPreference(context);
+        mode.setKey(VoiceSettings.PREF_RATE_MODE);
+        mode.setTitle(R.string.setting_rate_mode);
+        mode.setDialogTitle(R.string.setting_rate_mode);
+        mode.setPersistent(false);
+        mode.setEntries(new CharSequence[] { context.getString(R.string.rate_mode_smooth),
+                context.getString(R.string.rate_mode_standard), context.getString(R.string.rate_mode_boost) });
+        mode.setEntryValues(new CharSequence[] { VoiceSettings.RATE_MODE_SMOOTH,
+                VoiceSettings.RATE_MODE_STANDARD, VoiceSettings.RATE_MODE_BOOST });
+        mode.setValue(VoiceSettings.getRateMode(prefs));
+        updateRateModeSummary(mode);
+        mode.setOnPreferenceChangeListener((preference, value) -> {
+            final String selection = value.toString();
+            if (!VoiceSettings.setRateMode(prefs, selection, defaultValue)) {
+                new android.app.AlertDialog.Builder(context).setMessage(R.string.rate_mode_save_error)
+                        .setPositiveButton(android.R.string.ok, null).show();
+                return false;
+            }
+            mode.setValue(selection);
+            updateRateModeSummary(mode);
+            rate.setRateMode(selection);
+            rate.setProgress(VoiceSettings.getRateSliderValue(prefs, defaultValue));
+            return true;
+        });
+        return mode;
+    }
+
+    private static void updateRateModeSummary(ListPreference preference) {
+        AppearanceSettings.setOptionalSummary(preference, R.string.rate_mode_help);
+        final CharSequence help = preference.getSummary();
+        final CharSequence selected = preference.getEntry();
+        preference.setSummary(help == null ? selected : selected + "\n" + help);
     }
 
     private static Preference createPreserveImportedDictionariesPreference(Context context) {
@@ -267,7 +302,7 @@ public class TtsSettingsActivity extends PreferenceActivity {
         final CheckBoxPreference pref = new CheckBoxPreference(context);
         pref.setKey(VoiceSettings.PREF_IGNORE_SYSTEM_RATE);
         pref.setTitle(R.string.ignore_system_rate_title);
-        pref.setSummary(R.string.ignore_system_rate_summary);
+        AppearanceSettings.setOptionalSummary(pref, R.string.ignore_system_rate_summary);
         pref.setPersistent(true);
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(storageContext);
         pref.setChecked(prefs.getBoolean(VoiceSettings.PREF_IGNORE_SYSTEM_RATE, false));
@@ -278,7 +313,7 @@ public class TtsSettingsActivity extends PreferenceActivity {
         final CheckBoxPreference pref = new CheckBoxPreference(context);
         pref.setKey(EspeakApp.PREF_SHOW_LAUNCHER);
         pref.setTitle(R.string.show_launcher_title);
-        pref.setSummary(R.string.show_launcher_summary);
+        AppearanceSettings.setOptionalSummary(pref, R.string.show_launcher_summary);
         pref.setPersistent(true);
 
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(storageContext);
@@ -300,7 +335,7 @@ public class TtsSettingsActivity extends PreferenceActivity {
     private static Preference createSystemTtsSettingsPreference(final Context context) {
         final Preference pref = new Preference(context);
         pref.setTitle(R.string.open_system_tts_settings_title);
-        pref.setSummary(R.string.open_system_tts_settings_summary);
+        AppearanceSettings.setOptionalSummary(pref, R.string.open_system_tts_settings_summary);
         pref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
             @Override
             public boolean onPreferenceClick(Preference preference) {
@@ -312,6 +347,7 @@ public class TtsSettingsActivity extends PreferenceActivity {
     }
 
     private static void addVoiceDataErrorPreferences(Context context, PreferenceGroup group) {
+        AppearanceSettings.addPreferences((Activity) context, group);
         group.addPreference(createLauncherVisibilityPreference(context));
         group.addPreference(createSystemTtsSettingsPreference(context));
         Preference error = new Preference(context);
@@ -545,6 +581,7 @@ public class TtsSettingsActivity extends PreferenceActivity {
                                        boolean isWatch) {
         VoiceSettings settings = new VoiceSettings(PreferenceManager.getDefaultSharedPreferences(storageContext), engine);
 
+        AppearanceSettings.addPreferences((Activity) context, group);
         group.addPreference(createLauncherVisibilityPreference(context));
         group.addPreference(createSystemTtsSettingsPreference(context));
 
@@ -558,7 +595,10 @@ public class TtsSettingsActivity extends PreferenceActivity {
         }
         group.addPreference(createVoiceVariantPreference(context, settings, R.string.espeak_variant));
         group.addPreference(createSpeakPunctuationPreference(context, settings, R.string.espeak_speak_punctuation));
-        group.addPreference(createSeekBarPreference(context, engine.Rate, VoiceSettings.PREF_RATE, R.string.setting_default_rate));
+        final SeekBarPreference rate = createSeekBarPreference(context, engine.Rate,
+                VoiceSettings.PREF_RATE, R.string.setting_default_rate);
+        group.addPreference(createRateModePreference(context, rate, engine.Rate.getDefaultValue()));
+        group.addPreference(rate);
         group.addPreference(createIgnoreSystemRatePreference(context));
         group.addPreference(createSeekBarPreference(context, engine.Pitch, VoiceSettings.PREF_PITCH, R.string.setting_default_pitch));
         group.addPreference(createSeekBarPreference(context, engine.PitchRange, VoiceSettings.PREF_PITCH_RANGE, R.string.espeak_pitch_range));
@@ -584,8 +624,7 @@ public class TtsSettingsActivity extends PreferenceActivity {
                             }
                         } else if (preference instanceof SeekBarPreference) {
                             final SeekBarPreference seekBarPreference = (SeekBarPreference) preference;
-                            String formatter = seekBarPreference.getFormatter();
-                            summary = String.format(formatter, (String)newValue);
+                            summary = seekBarPreference.formatValue((String)newValue);
                         } else {
                             summary = (String)newValue;
                         }
