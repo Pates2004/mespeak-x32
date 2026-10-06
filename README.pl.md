@@ -2,7 +2,7 @@
 
 [English documentation](README.md)
 
-mespeak 1.44.05-r34 to silnik zamiany tekstu na mowę dla Androida. Integracja
+mespeak 1.44.05-r37 to silnik zamiany tekstu na mowę dla Androida. Integracja
 usługi, ustawień i JNI bazuje na eSpeak NG, a natywny syntezator oraz dane głosów
 pochodzą z rozwijanego klasycznego eSpeak 1.44.05, z naszym polskim słownikiem.
 
@@ -54,11 +54,20 @@ pozostaje domyślnie wyłączona i działa we wszystkich trybach.
 
 ## Słownik i aktualizacje
 
-r34 zachowuje spółgłoskę w rodzinie `pierwsz-` oraz pełniejsze zbitki w
-`sześćset`, `pięćdziesiąt`, `sześćdziesiąt`, `dziewięćdziesiąt` i pochodnych.
-Zapis cyfrowy zgadza się ze słownym; naturalne upodobnienia polskie pozostają.
-Pełniejsza wymowa jest wybraną preferencją, a nie twierdzeniem, że przyjęte
-w języku uproszczenia są niepoprawne.
+r37 poprawia dźwięczność spółgłosek w nazwach nawiasów kwadratowych i `²`,
+dodaje krótkie przerwy zależne od prędkości między słowami istniejących
+wielowyrazowych nazw znaków, w tym `u zamknięte`, oraz koryguje błędne
+zapisy fonetyczne istniejących symboli. Rozdzielono też słowa w składanych
+nazwach znaków z akcentami i wielkich liter. Uzgodnione nazwy pozostają zachowane.
+Zachowano spółgłoskę BOY w liczbach 30/40/200, niezmienione 300,
+uproszczenia rodzin 50/60/90, słyszalne `ć` w `sześćset`/600 oraz staranną
+wymowę rodziny `pierwsz-`. To wydanie zmienia dane słownika, bez zmian
+w logice aplikacji i syntezatora. Motywy, wybór języka oraz tryby prędkości
+pozostają bez zmian. Istniejący wpis nazwy spacji nierozdzielającej nie jest
+osiągalny podczas syntezy; to wydanie nie oznacza, że każdy znak jest zawsze
+odczytywany. Wewnętrzne literowanie rzadkich ligatur pozostaje bez przebudowy.
+Zachowane własne importy słowników nadal mogą zastępować dane dołączone
+do aplikacji.
 
 Domyślnie zachowywane są ręcznie importowane słowniki, również te zastępujące
 plik dołączony do aplikacji. Wyłączenie tej opcji działa przy następnej
@@ -68,7 +77,10 @@ przenoszone bez porzucania danych użytkownika, również po odblokowaniu telefo
 Historia: r29 — rodzina bezinteres-; r30 — stabilniejsza ikona/ostatnie aplikacje,
 ustawienia TTS, modulacja i podgląd; r31 — poprawki ci oraz zachowanie importów;
 r32 — przełącznik zachowania importów; r33 — ignorowanie prędkości klienta.
-r34 obejmuje bieżące zmiany słownika, wyglądu i trybów prędkości.
+r34 wprowadziło zmiany słownika, wyglądu i trybów prędkości; r35 koryguje
+wymowę rodzin 50/60/90, zachowując wybraną wymowę 600. r36 przywraca
+wybrane spółgłoski BOY w zapisie cyfrowym 30/40/200. r37 poprawia wymowę
+istniejących wielowyrazowych nazw znaków i nazw nawiasów kwadratowych.
 
 ## Kompilacja i podpis
 

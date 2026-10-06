@@ -4,7 +4,7 @@
 
 `mespeak x32` is the 32-bit Android Text-to-Speech edition of
 [`mespeak`](https://github.com/Pates2004/mespeak), based on eSpeak
-1.44.05-r34. It keeps the same TTS service, settings, JNI integration, native
+1.44.05-r37. It keeps the same TTS service, settings, JNI integration, native
 engine and current Polish dictionary as the 64-bit edition.
 
 The speech-rate settings offer smooth, standard and Sonic x3 modes. Smooth
@@ -23,10 +23,22 @@ overrides. The primary system language selects Polish only when it is Polish;
 all other primary languages select English. Optional usage hints can be hidden
 without removing essential labels, setting values, errors or warnings.
 
-The r34 Polish data uses fuller pronunciation for the `pierwsz-`, `sześćset`,
-`pięćdziesiąt`, `sześćdziesiąt` and `dziewięćdziesiąt` families, including
-numeric forms. Updates retain imported dictionaries according to the existing
-preservation setting. Final signed release APKs belong in `installfiles`.
+The r37 Polish dictionary corrects consonant voicing in square-bracket and
+`²` names, adds short speed-scaled pauses between words in existing compound
+character/symbol labels including `u zamknięte`, and fixes malformed existing
+symbol phonetics. Composed accent and capital-letter labels also have clear
+word boundaries. The chosen symbol vocabulary is preserved. The BOY-style
+consonant in numeric 30/40/200, unchanged numeric
+300, conventional 50/60/90 reductions, audible `ć` in `sześćset`/600 and the
+careful `pierwsz-` pronunciation are retained.
+This release changes dictionary data, not application or synthesizer logic.
+Themes, language selection and speech-rate modes are unchanged. The existing
+nonbreaking-space label remains unreachable at runtime; this update does not
+claim that every character is universally spoken. Rare ligatures retain
+their existing internal letter-name spelling. Preserved user-imported
+dictionaries can still override the bundled dictionary.
+Updates retain imported dictionaries according to the existing preservation
+setting. Final signed release APKs belong in `installfiles`.
 
 The installed application is labelled `mespeak`, like the 64-bit edition. Its
 settings interface follows the system language in Polish and uses English for
