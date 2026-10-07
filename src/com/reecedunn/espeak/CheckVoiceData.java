@@ -98,16 +98,37 @@ public class CheckVoiceData extends Activity {
     }
 
     public static boolean canUpgradeResources(Context context) {
-        try {
-            final String version = FileUtils.read(context.getResources().openRawResource(R.raw.espeakdata_version));
-            final String installedVersion = FileUtils.read(new File(getDataPath(context), "version"));
-            return !version.equals(installedVersion);
+        final String version;
+        try (InputStream bundled = context.getResources().openRawResource(R.raw.espeakdata_version)) {
+            version = FileUtils.read(bundled);
         } catch (Exception e) {
+            Log.e(TAG, "Cannot read bundled data version", e);
             return false;
+        }
+        try {
+            return !version.equals(FileUtils.read(new File(getDataPath(context), "version")));
+        } catch (IOException e) {
+            // A missing/unreadable installed marker is not evidence of current
+            // data. Recovery preserves retained imports under the usual policy.
+            return true;
         }
     }
 
     public static synchronized boolean extractVoiceData(Context context) {
+        synchronized (CoreState.LOCK) {
+            CoreState.invalidateVoice();
+            return extractVoiceDataLocked(context);
+        }
+    }
+
+    private static boolean extractVoiceDataLocked(Context context) {
+        final String version;
+        try (InputStream marker = context.getResources().openRawResource(R.raw.espeakdata_version)) {
+            version = FileUtils.read(marker);
+        } catch (Exception e) {
+            Log.e(TAG, "Cannot read bundled data version", e);
+            return false;
+        }
         final File dataPath = getDataPath(context);
         final InputStream stream = context.getResources().openRawResource(R.raw.espeakdata);
         final ZipInputStream zipStream = new ZipInputStream(new BufferedInputStream(stream));
@@ -161,8 +182,6 @@ public class CheckVoiceData extends Activity {
             } else {
                 discardRetainedDictionaries(context);
             }
-            final String version = FileUtils.read(
-                context.getResources().openRawResource(R.raw.espeakdata_version));
             FileUtils.write(new File(getDataPath(context), "version"), version);
             if (scanLegacy && !prefs.edit().putBoolean(PREF_LEGACY_IMPORTS_HANDLED, true).commit()) {
                 throw new IOException("Failed to record legacy import migration");
@@ -186,11 +205,19 @@ public class CheckVoiceData extends Activity {
 
     public static synchronized void installImportedDictionary(Context context, File source)
             throws IOException {
+        synchronized (CoreState.LOCK) {
+            installImportedDictionaryLocked(context, source);
+        }
+    }
+
+    private static void installImportedDictionaryLocked(Context context, File source)
+            throws IOException {
         if (!source.isFile() || !source.getName().endsWith("_dict")) {
             throw new IOException("Not a dictionary file");
         }
         final byte[] contents = FileUtils.readBinary(source);
         final File retained = new File(getImportedDictionaryPath(context), source.getName());
+        CoreState.invalidateVoice();
         FileUtils.write(retained, contents);
         FileUtils.write(new File(getDataPath(context), source.getName()), contents);
     }
@@ -264,6 +291,13 @@ public class CheckVoiceData extends Activity {
     }
 
     private static void restoreImportedDictionaries(Context context) throws IOException {
+        synchronized (CoreState.LOCK) {
+            CoreState.invalidateVoice();
+            restoreImportedDictionariesLocked(context);
+        }
+    }
+
+    private static void restoreImportedDictionariesLocked(Context context) throws IOException {
         final File[] imported = getImportedDictionaryPath(context).listFiles();
         if (imported == null) return;
         for (File dictionary : imported) {

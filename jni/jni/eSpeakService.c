@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <stdatomic.h>
 #include <stdbool.h>
+#include <limits.h>
 #include <string.h>
 #include <jni.h>
 
@@ -301,15 +302,25 @@ JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeGetAvailableVoices(
   if (DEBUG) LOGV("%s", __FUNCTION__);
 
   const espeak_VOICE **voices = espeak_ListVoices(NULL);
+  if (voices == NULL) {
+    LOGE("Unable to enumerate voices.");
+    return NULL;
+  }
 
   int count;
 
   // First, count the number of voices returned.
-  for (count = 0; voices[count] != NULL; count++);
+  for (count = 0; voices[count] != NULL; count++) {
+    if (count >= INT_MAX / 4) return NULL;
+  }
 
   // Next, create a Java String array.
+  jclass string_class = (*env)->FindClass(env, "java/lang/String");
+  if (string_class == NULL) return NULL;
   jobjectArray voicesArray = (jobjectArray) (*env)->NewObjectArray(
-      env, count * 4, (*env)->FindClass(env, "java/lang/String"), NULL);
+      env, count * 4, string_class, NULL);
+  (*env)->DeleteLocalRef(env, string_class);
+  if (voicesArray == NULL) return NULL;
 
   const espeak_VOICE *v;
   char gender_buf[12];
@@ -323,17 +334,25 @@ JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeGetAvailableVoices(
     sprintf(age_buf, "%d", v->age);
 
     jstring lang = (*env)->NewStringUTF(env, lang_name);
+    if (lang == NULL) return NULL;
     (*env)->SetObjectArrayElement(env, voicesArray, voicesIndex++, lang);
     (*env)->DeleteLocalRef(env, lang);
+    if ((*env)->ExceptionCheck(env)) return NULL;
     jstring ident = (*env)->NewStringUTF(env, identifier);
+    if (ident == NULL) return NULL;
     (*env)->SetObjectArrayElement(env, voicesArray, voicesIndex++, ident);
     (*env)->DeleteLocalRef(env, ident);
+    if ((*env)->ExceptionCheck(env)) return NULL;
     jstring gender = (*env)->NewStringUTF(env, gender_buf);
+    if (gender == NULL) return NULL;
     (*env)->SetObjectArrayElement(env, voicesArray, voicesIndex++, gender);
     (*env)->DeleteLocalRef(env, gender);
+    if ((*env)->ExceptionCheck(env)) return NULL;
     jstring age = (*env)->NewStringUTF(env, age_buf);
+    if (age == NULL) return NULL;
     (*env)->SetObjectArrayElement(env, voicesArray, voicesIndex++, age);
     (*env)->DeleteLocalRef(env, age);
+    if ((*env)->ExceptionCheck(env)) return NULL;
   }
 
   return voicesArray;

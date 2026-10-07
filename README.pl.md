@@ -2,13 +2,31 @@
 
 [English documentation](README.md)
 
-mespeak 1.44.05-r37 to silnik zamiany tekstu na mowę dla Androida. Integracja
+mespeak 1.44.05-r38 to silnik zamiany tekstu na mowę dla Androida. Integracja
 usługi, ustawień i JNI bazuje na eSpeak NG, a natywny syntezator oraz dane głosów
 pochodzą z rozwijanego klasycznego eSpeak 1.44.05, z naszym polskim słownikiem.
 
 Ta edycja obsługuje ABI `armeabi-v7a` i `x86` i używa identyfikatora `com.pates2004.mespeak.x32`.
 Druga edycja jest dostępna w [mespeak](https://github.com/Pates2004/mespeak).
 Obie mają te same funkcje i dane, a na liście aplikacji nazywają się mespeak.
+
+## Zmiany r38
+
+Przy kolejnych zwykłych wypowiedziach ten sam efektywny głos jest używany
+ponownie, bez ponownego wczytywania głosu i słownika. Zmiana języka lub wariantu,
+import danych, SSML, sterowanie osadzone, błędy i anulowanie unieważniają ten stan.
+Zachowano zwykłe resetowanie generatora, echa i filtrów oddechu przy wyborze głosu.
+Usunięto też stały limit katalogu, który mógł ukrywać dołączone głosy. Błędy
+alokacji i odczytu katalogu przez JNI nie są traktowane jako poprawna inicjalizacja
+pustej listy głosów.
+Po syntezie zwalniane są referencje tekstu i odbiorcy dźwięku. Odrzucenie wyjścia
+nie uruchamia zbędnej syntezy, a nieczytelny zainstalowany znacznik danych powoduje
+odzyskanie zasobów z zachowaniem istniejącej polityki importów.
+
+Słownik i wszystkie dołączone dane pozostają identyczne z r37. Ich osobny znacznik
+wersji pozostaje r37, więc aktualizacja samej aplikacji nie wymusza rozpakowania
+ich ponownie. Nie dodano pracy w tle; nie deklarujemy zmierzonej oszczędności baterii.
+Wymowa, motywy, nazwy, ustawienia i algorytmy prędkości nie są zmieniane przez r38.
 
 ## Instalacja i ustawienia
 
@@ -61,7 +79,7 @@ zapisy fonetyczne istniejących symboli. Rozdzielono też słowa w składanych
 nazwach znaków z akcentami i wielkich liter. Uzgodnione nazwy pozostają zachowane.
 Zachowano spółgłoskę BOY w liczbach 30/40/200, niezmienione 300,
 uproszczenia rodzin 50/60/90, słyszalne `ć` w `sześćset`/600 oraz staranną
-wymowę rodziny `pierwsz-`. To wydanie zmienia dane słownika, bez zmian
+wymowę rodziny `pierwsz-`. Wydanie r37 zmieniało dane słownika, bez zmian
 w logice aplikacji i syntezatora. Motywy, wybór języka oraz tryby prędkości
 pozostają bez zmian. Istniejący wpis nazwy spacji nierozdzielającej nie jest
 osiągalny podczas syntezy; to wydanie nie oznacza, że każdy znak jest zawsze

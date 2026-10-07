@@ -292,13 +292,9 @@ public class TtsService extends TextToSpeechService {
         mEngine.stop();
     }
 
-    @SuppressWarnings("deprecation")
-    private String getRequestString(SynthesisRequest request) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            return request.getCharSequenceText().toString();
-        } else {
-            return request.getText();
-        }
+    static String getRequestString(SynthesisRequest request) {
+        final CharSequence text = request.getCharSequenceText();
+        return text == null ? null : text.toString();
     }
 
     protected int selectLanguageWithFallback(String language, String country, String variant) {
@@ -438,6 +434,19 @@ public class TtsService extends TextToSpeechService {
             }
         }
 
+        synchronized (CoreState.LOCK) {
+            synthesizeSelectedVoice(request, callback, voice, text, textOffset);
+        }
+    }
+
+    private void synthesizeSelectedVoice(SynthesisRequest request, SynthesisCallback callback,
+            Voice voice, String text, int textOffset) {
+        if (callback.start(mEngine.getSampleRate(), mEngine.getAudioFormat(),
+                mEngine.getChannelCount()) != TextToSpeech.SUCCESS) {
+            // The framework has rejected/canceled this request. Do not load a
+            // voice, run synthesis, or emit a contradictory completion event.
+            return;
+        }
         mSynthText = text;
         mSynthTextOffset = textOffset;
         mSynthTextCodePoints = text.codePointCount(0, text.length());
@@ -445,10 +454,25 @@ public class TtsService extends TextToSpeechService {
         mAnchorOffset = 0;
 
         mCallback = callback;
-        mCallback.start(mEngine.getSampleRate(), mEngine.getAudioFormat(), mEngine.getChannelCount());
+        try {
+            configureAndSynthesize(request, callback, voice, text);
+        } finally {
+            mCallback = null;
+            mSynthText = null;
+            mSynthTextOffset = 0;
+            mSynthTextCodePoints = 0;
+            mAnchorCodePoint = 0;
+            mAnchorOffset = 0;
+        }
+    }
 
+    private void configureAndSynthesize(SynthesisRequest request, SynthesisCallback callback,
+            Voice voice, String text) {
         final VoiceSettings settings = new VoiceSettings(PreferenceManager.getDefaultSharedPreferences(storageContext), mEngine);
-        mEngine.setVoice(voice, settings.getVoiceVariant());
+        if (!mEngine.setVoice(voice, settings.getVoiceVariant())) {
+            reportError(callback, TextToSpeech.ERROR_SYNTHESIS);
+            return;
+        }
 
         final int rate = settings.getRateForCaller(request.getSpeechRate());
         final int normalMaximum = mEngine.Rate.getMaxValue();
@@ -502,6 +526,13 @@ public class TtsService extends TextToSpeechService {
             }
 
             final int maxBytesToCopy = mCallback.getMaxBufferSize();
+            if (maxBytesToCopy <= 0) {
+                // Reject a broken output buffer instead of looping with zero
+                // progress. This path must also invalidate the reusable voice.
+                mEngine.stop();
+                mCallback.error(TextToSpeech.ERROR_OUTPUT);
+                return;
+            }
 
             int offset = 0;
 

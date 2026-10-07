@@ -24,6 +24,7 @@
 #include "wctype.h"
 #include "string.h"
 #include "stdlib.h"
+#include <limits.h>
 #include "speech.h"
 
 #ifdef PLATFORM_WINDOWS
@@ -61,10 +62,70 @@ int formant_rate[9];         // values adjusted for actual sample rate
 
 
 #define DEFAULT_LANGUAGE_PRIORITY  5
-#define N_VOICES_LIST  150
+// Pointer storage has no fixed voice limit. The records themselves are owned
+// by the catalog; filtered and candidate lists only borrow their pointers.
+class VoicePointerList
+{
+public:
+	VoicePointerList() : data_(NULL), capacity_(0) {}
+	~VoicePointerList() { Clear(); }
+	VoicePointerList(const VoicePointerList&) = delete;
+	VoicePointerList& operator=(const VoicePointerList&) = delete;
+
+	bool Reserve(size_t count)
+	{
+		if(count <= capacity_)
+			return true;
+		const size_t maximum = SIZE_MAX / sizeof(espeak_VOICE*);
+		if(count > maximum)
+			return false;
+		size_t capacity = capacity_ ? capacity_ : 16;
+		while(capacity < count)
+		{
+			if(capacity > maximum/2) { capacity = count; break; }
+			capacity *= 2;
+		}
+		void* resized = realloc(data_,capacity*sizeof(espeak_VOICE*));
+		if(resized == NULL)
+			return false;
+		data_ = static_cast<espeak_VOICE**>(resized);
+		capacity_ = capacity;
+		return true;
+	}
+
+	void Clear()
+	{
+		free(data_);
+		data_ = NULL;
+		capacity_ = 0;
+	}
+	espeak_VOICE** Data() { return data_; }
+	espeak_VOICE*& operator[](size_t index) { return data_[index]; }
+
+private:
+	espeak_VOICE** data_;
+	size_t capacity_;
+};
+
 static int n_voices_list = 0;
-static espeak_VOICE *voices_list[N_VOICES_LIST];
+static VoicePointerList voices_list;
+static VoicePointerList public_voices;
+static bool voice_list_failed = false;
 static int len_path_voices;
+
+static void AddCatalogVoice(espeak_VOICE* item)
+{
+	if(item == NULL)
+		return;
+	if(n_voices_list == INT_MAX || !voices_list.Reserve(static_cast<size_t>(n_voices_list)+2))
+	{
+		free(item);
+		voice_list_failed = true;
+		return;
+	}
+	voices_list[n_voices_list++] = item;
+	voices_list[n_voices_list] = NULL;
+}
 
 espeak_VOICE voice_selected;
 
@@ -357,7 +418,10 @@ static espeak_VOICE *ReadVoiceFile(FILE *f_in, const char *fname, const char*lea
 
 	p = (char *)calloc(sizeof(espeak_VOICE) + langix + strlen(fname) + strlen(vname) + 3, 1);
 	if(p == NULL)
+	{
+		voice_list_failed = true;
 		return(NULL);
+	}
 	voice_data = (espeak_VOICE *)p;
 	p = &p[sizeof(espeak_VOICE)];
 
@@ -1378,18 +1442,16 @@ espeak_VOICE *SelectVoiceByName(espeak_VOICE **voices, const char *name)
 	int match_fname2 = -1;
 	int match_name = -1;
 	const char *id;
-	int last_part_len;
-	char last_part[41];
+	const size_t name_length = strlen(name);
 
 	if(voices == NULL)
 	{
 		if(n_voices_list == 0)
 			espeak_ListVoices(NULL);   // create the voices list
-		voices = voices_list;
+		voices = voices_list.Data();
 	}
-
-	sprintf(last_part,"%c%s",PATHSEP,name);
-	last_part_len = static_cast<int>(strlen(last_part));
+	if(voices == NULL)
+		return(NULL);
 
 	for(ix=0; voices[ix] != NULL; ix++)
 	{
@@ -1404,7 +1466,8 @@ espeak_VOICE *SelectVoiceByName(espeak_VOICE **voices, const char *name)
 			match_fname = ix;  // matching identifier, use this if no matching name
 		}
 		else
-		if(strcmp(last_part,&id[strlen(id)-last_part_len])==0)
+		if(strlen(id) > name_length && id[strlen(id)-name_length-1] == PATHSEP &&
+			strcmp(name,id+strlen(id)-name_length)==0)
 		{
 			match_fname2 = ix;
 		}
@@ -1443,8 +1506,8 @@ char const *SelectVoice(espeak_VOICE *voice_select, int *found)
 	espeak_VOICE *vp = NULL;
 	espeak_VOICE *vp2;
 	espeak_VOICE voice_select2;
-	espeak_VOICE *voices[N_VOICES_LIST]; // list of candidates
-	espeak_VOICE *voices2[N_VOICES_LIST+N_VOICE_VARIANTS];
+	VoicePointerList voices;  // borrowed candidate pointers
+	VoicePointerList voices2;
 	static espeak_VOICE voice_variants[N_VOICE_VARIANTS];
 	static char voice_id[50];
 
@@ -1453,6 +1516,12 @@ char const *SelectVoice(espeak_VOICE *voice_select, int *found)
 
 	if(n_voices_list == 0)
 		espeak_ListVoices(NULL);   // create the voices list
+	if(voice_list_failed || !voices.Reserve(static_cast<size_t>(n_voices_list)+1) ||
+		!voices2.Reserve(static_cast<size_t>(n_voices_list)+N_VOICE_VARIANTS+1))
+	{
+		*found = 0;
+		return(NULL);
+	}
 
 	if((voice_select2.languages == NULL) || (voice_select2.languages[0] == 0))
 	{
@@ -1468,7 +1537,7 @@ char const *SelectVoice(espeak_VOICE *voice_select, int *found)
 		strncpy0(buf,voice_select2.name,sizeof(buf));
 		variant_name = ExtractVoiceVariantName(buf,0);
 
-		vp = SelectVoiceByName(voices_list,buf);
+		vp = SelectVoiceByName(voices_list.Data(),buf);
 		if(vp != NULL)
 		{
 			voice_select2.languages = &(vp->languages[1]);
@@ -1487,13 +1556,13 @@ char const *SelectVoice(espeak_VOICE *voice_select, int *found)
 	}
 
 	// select and sort voices for the required language
-	nv = SetVoiceScores(&voice_select2,voices,0);
+	nv = SetVoiceScores(&voice_select2,voices.Data(),0);
 
 	if(nv == 0)
 	{
 		// no matching voice, choose the default
 		*found = 0;
-		if((voices[0] = SelectVoiceByName(voices_list,"default")) != NULL)
+		if((voices[0] = SelectVoiceByName(voices_list.Data(),"default")) != NULL)
 			nv = 1;
 	}
 
@@ -1585,6 +1654,8 @@ char const *SelectVoice(espeak_VOICE *voice_select, int *found)
 
 static void GetVoices(const char *path)
 {//====================================
+	if(voice_list_failed)
+		return;
 	FILE *f_voice;
 	espeak_VOICE *voice_data;
 	int ftype;
@@ -1609,6 +1680,7 @@ static void GetVoices(const char *path)
 
 	while(regs.r[3] > 0)
 	{
+		if(voice_list_failed) break;
 		error = _kernel_swi(0x0c+0x20000,&regs,&regs);      /* OS_GBPB 10, read directory entries */
 		if((error != NULL) || (regs.r[3] == 0))
 		{
@@ -1635,7 +1707,7 @@ static void GetVoices(const char *path)
 
 			if(voice_data != NULL)
 			{
-				voices_list[n_voices_list++] = voice_data;
+				AddCatalogVoice(voice_data);
 			}
 		}
 	}
@@ -1651,6 +1723,7 @@ static void GetVoices(const char *path)
 		return;
 
 	do {
+		if(voice_list_failed) break;
 		sprintf(fname,"%s%c%s",path,PATHSEP,FindFileData.cFileName);
 
 		ftype = GetFileLength(fname);
@@ -1673,7 +1746,7 @@ static void GetVoices(const char *path)
 
 			if(voice_data != NULL)
 			{
-				voices_list[n_voices_list++] = voice_data;
+				AddCatalogVoice(voice_data);
 			}
 		}
 	} while(FindNextFileA(hFind, &FindFileData) != 0);
@@ -1688,8 +1761,8 @@ static void GetVoices(const char *path)
 
 	while((ent = readdir(dir)) != NULL)
 	{
-		if(n_voices_list >= (N_VOICES_LIST-2))
-			break;   // voices list is full
+		if(voice_list_failed)
+			break;
 
 		sprintf(fname,"%s%c%s",path,PATHSEP,ent->d_name);
 
@@ -1713,7 +1786,7 @@ static void GetVoices(const char *path)
 
 			if(voice_data != NULL)
 			{
-				voices_list[n_voices_list++] = voice_data;
+				AddCatalogVoice(voice_data);
 			}
 		}
 	}
@@ -1756,7 +1829,7 @@ espeak_ERROR SetVoiceByName(const char *name)
 	if(n_voices_list == 0)
 		espeak_ListVoices(NULL);   // create the voices list
 
-	if((v = SelectVoiceByName(voices_list,buf)) != NULL)
+	if((v = SelectVoiceByName(voices_list.Data(),buf)) != NULL)
 	{
 		if(LoadVoice(v->identifier,0) != NULL)
 		{
@@ -1802,32 +1875,50 @@ espeak_ERROR SetVoiceByProperties(espeak_VOICE *voice_selector)
 #endif
 
 
+void FreeVoiceList(void)
+{
+	for(int ix=0; ix<n_voices_list; ix++)
+	{
+		free(voices_list[ix]);
+		voices_list[ix] = NULL;
+	}
+	n_voices_list = 0;
+	voices_list.Clear();
+	public_voices.Clear();
+}
+
+
 ESPEAK_API const espeak_VOICE **espeak_ListVoices(espeak_VOICE *voice_spec)
 {//========================================================================
 #ifndef PLATFORM_RISCOS
 	int ix;
 	int j;
 	espeak_VOICE *v;
-	static espeak_VOICE *voices[N_VOICES_LIST];
 	char path_voices[sizeof(path_home)+12];
 
 	// free previous voice list data
 
-	for(ix=0; ix<n_voices_list; ix++)
-	{
-		if(voices_list[ix] != NULL)
-			free(voices_list[ix]);
-	}
-	n_voices_list = 0;
+	FreeVoiceList();
+	voice_list_failed = !voices_list.Reserve(1);
+	if(voice_list_failed)
+		return(NULL);
+	voices_list[0] = NULL;
 
 	sprintf(path_voices,"%s%cvoices",path_home,PATHSEP);
 	len_path_voices = static_cast<int>(strlen(path_voices))+1;
 
 	GetVoices(path_voices);
+	if(voice_list_failed || !public_voices.Reserve(static_cast<size_t>(n_voices_list)+1))
+	{
+		FreeVoiceList();
+		voice_list_failed = true;
+		return(NULL);
+	}
+	espeak_VOICE** voices = public_voices.Data();
 	voices_list[n_voices_list] = NULL;  // voices list terminator
 
 	// sort the voices list
-	qsort(voices_list,n_voices_list,sizeof(espeak_VOICE *),
+	qsort(voices_list.Data(),n_voices_list,sizeof(espeak_VOICE *),
 		(int (__cdecl *)(const void *,const void *))VoiceNameSorter);
 
 
@@ -1851,7 +1942,7 @@ ESPEAK_API const espeak_VOICE **espeak_ListVoices(espeak_VOICE *voice_spec)
 	}
 	return((const espeak_VOICE **)voices);
 #endif
-	return((const espeak_VOICE **)voices_list);
+	return((const espeak_VOICE **)voices_list.Data());
 }  //  end of espeak_ListVoices
 
 

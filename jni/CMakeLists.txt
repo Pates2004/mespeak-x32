@@ -46,6 +46,7 @@ set(ENGINE_SOURCES
 
 add_library(ttsespeak SHARED
     jni/eSpeakService.c
+    jni/VoiceState.cpp
     ${sonic-git_SOURCE_DIR}/sonic.c
     ${ENGINE_SOURCES}
 )

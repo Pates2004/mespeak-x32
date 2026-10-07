@@ -65,7 +65,8 @@ public class SpeechSynthesis {
     private boolean mInitialized = false;
     private static final Object INITIALIZATION_LOCK = new Object();
     private static int sSampleRate;
-    private static String[] sVoiceData = new String[0];
+    private static final String[] NO_VOICES = new String[0];
+    private static String[] sVoiceData;
     private static int mVoiceCount = 0;
     private int mSampleRate = 0;
 
@@ -128,7 +129,7 @@ public class SpeechSynthesis {
         final List<Voice> voices = new LinkedList<Voice>();
         final String[] results;
         synchronized (INITIALIZATION_LOCK) {
-            results = sVoiceData;
+            results = sVoiceData == null ? NO_VOICES : sVoiceData;
         }
         mVoiceCount = results.length / 4;
 
@@ -174,18 +175,35 @@ public class SpeechSynthesis {
         return voices;
     }
 
-    public void setVoice(Voice voice, VoiceVariant variant) {
+    public boolean setVoice(Voice voice, VoiceVariant variant) {
         // NOTE: espeak_SetVoiceByProperties does not support specifying the
         // voice variant (e.g. klatt), but espeak_SetVoiceByName does.
-        if (variant.variant == null) {
-            nativeSetVoiceByProperties(voice.name, variant.gender, variant.age);
-        } else {
-            nativeSetVoiceByName(voice.identifier + "+" + variant.variant);
+        synchronized (CoreState.LOCK) {
+            final boolean byProperties = variant.variant == null;
+            final String name = byProperties ? voice.name : voice.identifier + "+" + variant.variant;
+            final String key = byProperties
+                    ? "properties:" + name + ":" + variant.gender + ":" + variant.age
+                    : "name:" + name;
+            final long revision = CoreState.revision.get();
+            if (revision == CoreState.selectedRevision && key.equals(CoreState.selectedVoice)) {
+                if (nativeReapplyVoice()) return true;
+            }
+            CoreState.selectedVoice = null;
+            final boolean success = byProperties
+                    ? nativeSetVoiceByProperties(name, variant.gender, variant.age)
+                    : nativeSetVoiceByName(name);
+            if (success) {
+                CoreState.selectedVoice = key;
+                CoreState.selectedRevision = revision;
+            }
+            return success;
         }
     }
 
     public void setPunctuationCharacters(String characters) {
-        nativeSetPunctuationCharacters(characters);
+        synchronized (CoreState.LOCK) {
+            nativeSetPunctuationCharacters(characters);
+        }
     }
 
     /** Don't announce any punctuation characters. */
@@ -239,7 +257,9 @@ public class SpeechSynthesis {
         }
 
         public void setValue(int value) {
-            nativeSetParameter(id, value);
+            synchronized (CoreState.LOCK) {
+                nativeSetParameter(id, value);
+            }
         }
 
         public UnitType getUnitType() {
@@ -265,22 +285,48 @@ public class SpeechSynthesis {
     public boolean synthesize(String text, boolean isSsml) {
         // Native synthesis is synchronous. Complete only after its final status
         // is known, so a failed Sonic flush cannot look like a successful call.
-        final boolean success = nativeSynthesize(text, isSsml);
-        if (success && mCallback != null) mCallback.onSynthDataComplete();
-        return success;
+        synchronized (CoreState.LOCK) {
+            // SSML and embedded controls may change native voice/timbre state.
+            // Never reuse that state for a later ordinary request, even on abort.
+            boolean reusable = !isSsml && text != null;
+            if (reusable) {
+                for (int i = 0; i < text.length(); i++) {
+                    char value = text.charAt(i);
+                    if (Character.isISOControl(value) && value != '\n'
+                            && value != '\r' && value != '\t') {
+                        reusable = false;
+                        break;
+                    }
+                }
+            }
+            boolean success = false;
+            try {
+                final boolean nativeSuccess = nativeSynthesize(text, isSsml);
+                if (nativeSuccess && mCallback != null) mCallback.onSynthDataComplete();
+                success = nativeSuccess;
+                return success;
+            } finally {
+                if (!reusable || !success) CoreState.invalidateVoice();
+            }
+        }
     }
 
     /** Selects clarity-oriented core timing and Sonic compression above 450 WPM. */
     public void setSonicRate(int rate) {
-        nativeSetSonicRate(rate);
+        synchronized (CoreState.LOCK) {
+            nativeSetSonicRate(rate);
+        }
     }
 
     /** Keeps native articulation unchanged at the smooth-mode handoff. */
     public void setSmoothRate(int rate) {
-        nativeSetSmoothRate(rate);
+        synchronized (CoreState.LOCK) {
+            nativeSetSmoothRate(rate);
+        }
     }
 
     public void stop() {
+        CoreState.invalidateVoice();
         nativeStop();
     }
 
@@ -314,31 +360,42 @@ public class SpeechSynthesis {
 
         // The classic core is process-global. Reinitializing it from Settings
         // or CHECK_TTS_DATA can reset/reallocate buffers while TtsService speaks.
-        if (sSampleRate > 0) {
+        if (sSampleRate > 0 && sVoiceData != null) {
             mSampleRate = sSampleRate;
             mInitialized = true;
             return;
         }
 
-        if (!CheckVoiceData.hasBaseResources(mContext)) {
-            Log.e(TAG, "Missing base resources");
-            return;
-        }
+        synchronized (CoreState.LOCK) {
+            if (!CheckVoiceData.hasBaseResources(mContext)) {
+                Log.e(TAG, "Missing base resources");
+                return;
+            }
+            if (sSampleRate <= 0) {
+                CoreState.invalidateVoice();
+                sSampleRate = nativeCreate(mDatapath);
+            }
+            if (sSampleRate <= 0) {
+                sSampleRate = 0;
+                Log.e(TAG, "Failed to initialize speech synthesis library");
+                return;
+            }
+            final String[] voices = nativeGetAvailableVoices();
+            if (voices == null || voices.length == 0 || voices.length % 4 != 0) {
+                // Keep the successfully initialized native core, but do not
+                // publish a usable wrapper or failed metadata. A later wrapper
+                // can retry enumeration without reinitializing the live core.
+                Log.e(TAG, "Failed to enumerate speech voices");
+                return;
+            }
+            sVoiceData = voices;
+            mSampleRate = sSampleRate;
+            if (BuildConfig.DEBUG) {
+                Log.i(TAG, "Initialized synthesis library with sample rate = " + getSampleRate());
+            }
 
-        mSampleRate = nativeCreate(mDatapath);
-        if (mSampleRate <= 0) {
-            mSampleRate = 0;
-            Log.e(TAG, "Failed to initialize speech synthesis library");
-            return;
+            mInitialized = true;
         }
-
-        if (BuildConfig.DEBUG) {
-            Log.i(TAG, "Initialized synthesis library with sample rate = " + getSampleRate());
-        }
-
-        sVoiceData = nativeGetAvailableVoices();
-        sSampleRate = mSampleRate;
-        mInitialized = true;
     }
 
     public static String getSampleText(Context context, Locale locale) {
@@ -362,6 +419,8 @@ public class SpeechSynthesis {
     private native final String[] nativeGetAvailableVoices();
 
     private native final boolean nativeSetVoiceByName(String name);
+
+    private native final boolean nativeReapplyVoice();
 
     private native final boolean nativeSetVoiceByProperties(String language, int gender, int age);
 
