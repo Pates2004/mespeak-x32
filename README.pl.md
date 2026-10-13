@@ -2,7 +2,7 @@
 
 [English documentation](README.md)
 
-mespeak 1.44.05-r39 to silnik zamiany tekstu na mowę dla Androida. Integracja
+mespeak 1.44.05-r40 to silnik zamiany tekstu na mowę dla Androida. Integracja
 usługi, ustawień i JNI bazuje na eSpeak NG, a natywny syntezator oraz dane głosów
 pochodzą z rozwijanego klasycznego eSpeak 1.44.05, z naszym polskim słownikiem.
 
@@ -10,16 +10,28 @@ Ta edycja obsługuje ABI `armeabi-v7a` i `x86` i używa identyfikatora `com.pate
 Druga edycja jest dostępna w [mespeak](https://github.com/Pates2004/mespeak).
 Obie mają te same funkcje i dane, a na liście aplikacji nazywają się mespeak.
 
+## Zmiany r40
+
+Poprawiono rodziny `ziśc-`, `ziść-` i `ziszcz-`, również z przedrostkami,
+np. `nieziszczalny`: mają twarde `z`, po którym wymawiane jest `i`.
+To wymowa zgodna z hasłami WSJP
+[`ziścić`](https://wsjp.pl/haslo/podglad/65243/ziscic) oraz
+[`ziszczać się`](https://wsjp.pl/haslo/podglad/43703/ziszczac-sie).
+Wydanie r40 zastępuje błędne zmiękczenie tej rodziny w r39.
+Poprawka rodziny `sing` pozostaje zachowana.
+Względem r39 zmieniają się tylko `pl_dict`, znacznik danych i metadane wydania.
+Interfejs, prędkość, importy i algorytmy syntezy pozostają bez zmian.
+
 ## Zmiany r39
 
 Zawężono polski wyjątek twardego `si` do rodzin `singl-`, `singiel-`,
 `singel-` i `singapur-`, zachowując dotychczasową zgodność `singular-`.
 `sing`, `singing`, `singer` i pokrewne formy mają dzięki temu miękkie polskie
 `si`, a `single`, `singiel` i ich odmiany zachowują twardą wymowę.
-Wąski wyjątek rodziny `nieziszcz-` przywraca też miękkie `zi`, które wcześniej
-utwardzała zbyt ogólna reguła `niezi-`.
-Zmieniają się wyłącznie dołączony `pl_dict` i znacznik danych na r39.
-Interfejs, tryby prędkości, obsługa importów i algorytmy syntezy zachowują działanie r38.
+W r39 błędnie zmiękczono też `zi` w rodzinie `nieziszcz-`; tę niepoprawną
+językowo zmianę naprawia r40. R39 zmieniało wyłącznie dołączony `pl_dict`
+i znacznik danych. Interfejs, tryby prędkości, obsługa importów i algorytmy
+syntezy zachowały działanie r38.
 
 ## Zmiany r38
 
