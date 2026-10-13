@@ -4,6 +4,8 @@ param(
     [switch]$SkipBuild
 )
 
+. (Join-Path $PSScriptRoot 'project_materials.ps1')
+
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 if ([string]::IsNullOrWhiteSpace($SigningDirectory)) {
@@ -46,9 +48,13 @@ function Invoke-NativeCommand {
 }
 
 if (-not $SkipBuild) {
-    Invoke-NativeCommand -FilePath (Join-Path $repoRoot 'gradlew.bat') `
-        -Arguments @('assembleRelease', '--console=plain') `
-        -FailureMessage 'Release build failed.'
+    Push-Location -LiteralPath $repoRoot
+    try {
+        Invoke-NativeCommand -FilePath (Join-ProjectMaterialPath $repoRoot 'gradlew.bat') `
+            -Arguments @('assembleRelease', '--console=plain') `
+            -FailureMessage 'Release build failed.'
+    }
+    finally { Pop-Location }
 }
 
 $androidHome = $env:ANDROID_HOME
@@ -61,12 +67,12 @@ $apksigner = Get-ChildItem -LiteralPath (Join-Path $androidHome 'build-tools') `
     Select-Object -First 1 -ExpandProperty FullName
 if ([string]::IsNullOrWhiteSpace($apksigner)) { throw 'apksigner was not found.' }
 
-$manifest = Get-Content -LiteralPath (Join-Path $repoRoot 'AndroidManifest.xml') -Raw
+$manifest = Get-Content -LiteralPath (Join-ProjectMaterialPath $repoRoot 'AndroidManifest.xml') -Raw
 $versionMatch = [regex]::Match($manifest, 'android:versionName="([^"]+)"')
 if (-not $versionMatch.Success) { throw 'Cannot read versionName from AndroidManifest.xml.' }
 $versionName = $versionMatch.Groups[1].Value
-$unsignedApk = Join-Path $repoRoot 'build\outputs\apk\release\mespeak-x32-release-unsigned.apk'
-$signedApk = Join-Path $repoRoot "build\outputs\apk\mespeak-x32-$versionName.apk"
+$unsignedApk = Join-ProjectMaterialPath $repoRoot 'build\outputs\apk\release\mespeak-x32-release-unsigned.apk'
+$signedApk = Join-ProjectMaterialPath $repoRoot "build\outputs\apk\mespeak-x32-$versionName.apk"
 if (-not (Test-Path -LiteralPath $unsignedApk -PathType Leaf)) {
     throw "Missing unsigned release APK: $unsignedApk"
 }
@@ -112,7 +118,7 @@ finally {
     Remove-Item Env:MESPEAK_RELEASE_KEY_PASSWORD -ErrorAction SilentlyContinue
 }
 
-$installFiles = Join-Path $repoRoot 'installfiles'
+$installFiles = Join-ProjectMaterialPath $repoRoot 'installfiles'
 New-Item -ItemType Directory -Path $installFiles -Force | Out-Null
 $installerCopy = Join-Path $installFiles ([IO.Path]::GetFileName($signedApk))
 if (Test-Path -LiteralPath $installerCopy) {
@@ -121,8 +127,8 @@ if (Test-Path -LiteralPath $installerCopy) {
 $signedHash = (Get-FileHash -LiteralPath $signedApk).Hash
 $resolvedSigned = [IO.Path]::GetFullPath($signedApk)
 $resolvedInstaller = [IO.Path]::GetFullPath($installerCopy)
-if (-not $resolvedSigned.StartsWith($repoRoot + '\build\', [StringComparison]::OrdinalIgnoreCase) -or
-    -not $resolvedInstaller.StartsWith($repoRoot + '\installfiles\', [StringComparison]::OrdinalIgnoreCase)) {
+if (-not $resolvedSigned.StartsWith((Join-ProjectMaterialPath $repoRoot 'build').TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase) -or
+    -not $resolvedInstaller.StartsWith($installFiles.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
     throw 'The signed APK move would leave the project artifact directories.'
 }
 Move-Item -LiteralPath $signedApk -Destination $installerCopy

@@ -1,11 +1,22 @@
+> Local build and assistant materials were moved to `D:\work\espeak-1.44.05-source\mespeak-x32`. Paths beginning with `installfiles`, `Workspace`, `snapshots`, `trash` or `Forme` below refer to that central directory; source paths remain relative to this checkout. Use `C:\work` only if drive D: does not exist.
+
 # mespeak x32
 
 [Polska dokumentacja](README.pl.md)
 
 `mespeak x32` is the 32-bit Android Text-to-Speech edition of
 [`mespeak`](https://github.com/Pates2004/mespeak), based on eSpeak
-1.44.05-r38. It keeps the same TTS service, settings, JNI integration, native
+1.44.05-r39. It keeps the same TTS service, settings, JNI integration, native
 engine and current Polish dictionary as the 64-bit edition.
+
+Release r39 narrows the Polish hard-`si` exception to `singl-`, `singiel-`,
+`singel-` and `singapur-`, while preserving the existing `singular-` behavior.
+`sing`, `singing`, `singer` and related forms therefore use Polish soft `si`;
+`single`, `singiel` and their inflections keep the hard pronunciation.
+The existing overbroad `niezi-` exception is also narrowed for `nieziszcz-`
+forms so their `zi` remains soft. The only changed bundled files are
+`pl_dict` and the data-version marker, now r39. App/UI, speed modes, imports
+and native synthesis algorithms retain r38 behavior.
 
 Release r38 reuses an unchanged effective voice for ordinary consecutive requests,
 avoiding repeated voice/dictionary loading. Language/variant changes, data imports,
@@ -121,6 +132,12 @@ families.
 
 Use JDK 17 and the Android SDK, NDK and CMake versions declared in
 `build.gradle`:
+
+Build output, Gradle project cache and CMake staging are centralized under
+`D:\work\espeak-1.44.05-source\mespeak-x32` in `build`, `.gradle` and `.cxx`.
+Generated voice-data resources are included from the central build directory.
+The Windows wrapper configures the project-cache path automatically. Drive C:
+is used only if drive D: does not exist.
 
 ```text
 gradlew.bat assembleDebug

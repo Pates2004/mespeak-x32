@@ -70,12 +70,16 @@ echo location of your Java installation. 1>&2
 :execute
 @rem Setup the command line
 
+@rem Resolve the user's central project cache before Gradle opens any local state.
+for /f "delims=" %%i in ('powershell.exe -NoProfile -Command ". (Join-Path $env:APP_HOME 'project_materials.ps1'); Join-ProjectMaterialPath $env:APP_HOME '.gradle'"') do set PROJECT_CACHE_DIR=%%i
+if not defined PROJECT_CACHE_DIR exit /b 1
+
 
 
 @rem Execute gradlew
 @rem endlocal doesn't take effect until after the line is parsed and variables are expanded
 @rem which allows us to clear the local environment before executing the java command
-endlocal & "%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -jar "%APP_HOME%\gradle\wrapper\gradle-wrapper.jar" %* & call :exitWithErrorLevel
+endlocal & "%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -jar "%APP_HOME%\gradle\wrapper\gradle-wrapper.jar" --project-cache-dir "%PROJECT_CACHE_DIR%" %* & call :exitWithErrorLevel
 
 :exitWithErrorLevel
 @rem Use "%COMSPEC%" /c exit to allow operators to work properly in scripts

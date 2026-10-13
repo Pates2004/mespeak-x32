@@ -2,13 +2,24 @@
 
 [English documentation](README.md)
 
-mespeak 1.44.05-r38 to silnik zamiany tekstu na mowę dla Androida. Integracja
+mespeak 1.44.05-r39 to silnik zamiany tekstu na mowę dla Androida. Integracja
 usługi, ustawień i JNI bazuje na eSpeak NG, a natywny syntezator oraz dane głosów
 pochodzą z rozwijanego klasycznego eSpeak 1.44.05, z naszym polskim słownikiem.
 
 Ta edycja obsługuje ABI `armeabi-v7a` i `x86` i używa identyfikatora `com.pates2004.mespeak.x32`.
 Druga edycja jest dostępna w [mespeak](https://github.com/Pates2004/mespeak).
 Obie mają te same funkcje i dane, a na liście aplikacji nazywają się mespeak.
+
+## Zmiany r39
+
+Zawężono polski wyjątek twardego `si` do rodzin `singl-`, `singiel-`,
+`singel-` i `singapur-`, zachowując dotychczasową zgodność `singular-`.
+`sing`, `singing`, `singer` i pokrewne formy mają dzięki temu miękkie polskie
+`si`, a `single`, `singiel` i ich odmiany zachowują twardą wymowę.
+Wąski wyjątek rodziny `nieziszcz-` przywraca też miękkie `zi`, które wcześniej
+utwardzała zbyt ogólna reguła `niezi-`.
+Zmieniają się wyłącznie dołączony `pl_dict` i znacznik danych na r39.
+Interfejs, tryby prędkości, obsługa importów i algorytmy syntezy zachowują działanie r38.
 
 ## Zmiany r38
 
@@ -30,7 +41,9 @@ Wymowa, motywy, nazwy, ustawienia i algorytmy prędkości nie są zmieniane prze
 
 ## Instalacja i ustawienia
 
-Podpisany plik release znajduje się w `installfiles`. Pierwsze otwarcie
+Podpisany plik release znajduje się w
+`D:\work\espeak-1.44.05-source\mespeak-x32\installfiles`.
+`C:\work` jest używane wyłącznie wtedy, gdy dysk D: nie istnieje. Pierwsze otwarcie
 instaluje dołączone dane głosów przed wyświetleniem list, z wybranymi wszystkimi
 językami. Można przejść z aplikacji do systemowych ustawień zamiany tekstu na
 mowę; przy niedostępnej stronie producenta dostępne są bezpieczne przejścia
@@ -103,6 +116,11 @@ istniejących wielowyrazowych nazw znaków i nazw nawiasów kwadratowych.
 ## Kompilacja i podpis
 
 Wymagane są JDK 17 oraz wersje SDK, NDK i CMake z `build.gradle`.
+Materiały kompilacji są w `D:\work\espeak-1.44.05-source\mespeak-x32`:
+`build`, `.gradle` i `.cxx`. Wygenerowane zasoby słownika pochodzą z centralnego
+`build/generated`, a wrapper Windows sam ustawia ścieżkę pamięci podręcznej.
+Finalne APK są w centralnym `installfiles`, wcześniejsze wydania w `snapshots`.
+Dysk C: jest używany wyłącznie wtedy, gdy dysk D: nie istnieje.
 Kompilacja deweloperska: `gradlew.bat assembleDebug`.
 Podpisany release: `powershell -ExecutionPolicy Bypass -File build-release.ps1`.
 Skrypt pobiera klucze z sąsiedniego katalogu `signing`, którego nie wolno
