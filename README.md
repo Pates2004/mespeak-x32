@@ -1,4 +1,4 @@
-> Local build and assistant materials were moved to `D:\work\espeak-1.44.05-source\mespeak-x32`. Paths beginning with `installfiles`, `Workspace`, `snapshots`, `trash` or `Forme` below refer to that central directory; source paths remain relative to this checkout. Use `C:\work` only if drive D: does not exist.
+> Current signed APKs are in this checkout's `installfiles`. Build/diagnostic files are in `D:\work\Workspace\mespeak-x32`, internal audits in `D:\work\Forme\mespeak-x32`, prior versions in `D:\work\Snapshots\mespeak-x32`, and disposable generated files in `D:\work\Trash\mespeak-x32`. Use the same layout under `C:\work` only if drive D: does not exist.
 
 # mespeak x32
 
@@ -6,8 +6,13 @@
 
 `mespeak x32` is the 32-bit Android Text-to-Speech edition of
 [`mespeak`](https://github.com/Pates2004/mespeak), based on eSpeak
-1.44.05-r40. It keeps the same TTS service, settings, JNI integration, native
+1.44.05-r41. It keeps the same TTS service, settings, JNI integration, native
 engine and current Polish dictionary as the 64-bit edition.
+
+Release r41 renames the spoken Polish name of the ASCII hyphen-minus `-`
+from `myślnik` to `minus`. The six full round/square/curly bracket names
+were verified and retained. This update changes only the Polish dictionary,
+its data marker and release metadata; Android UI and speed behavior are unchanged.
 
 Release r40 corrects the Polish `ziśc-`, `ziść-` and `ziszcz-` families,
 including prefixed forms such as `nieziszczalny`, to hard `z` followed by `i`.
@@ -75,8 +80,9 @@ setting. Final signed release APKs belong in `installfiles`.
 
 The installed application is labelled `mespeak`, like the 64-bit edition. Its
 settings interface follows the system language in Polish and uses English for
-every other locale. A checked-by-default setting can hide the launcher icon
-without disabling the TTS engine or its Android TTS settings entry.
+every other locale. A checked-by-default setting controls whether the `mespeak`
+icon is shown in the launcher; hiding it does not disable the TTS engine or
+remove its entry from Android TTS settings.
 
 On first launch, bundled voice data is installed before the settings lists are
 built, all languages start selected, and a shortcut opens Android's system TTS
@@ -143,7 +149,7 @@ Use JDK 17 and the Android SDK, NDK and CMake versions declared in
 `build.gradle`:
 
 Build output, Gradle project cache and CMake staging are centralized under
-`D:\work\espeak-1.44.05-source\mespeak-x32` in `build`, `.gradle` and `.cxx`.
+`D:\work\Workspace\mespeak-x32` in `build`, `.gradle` and `.cxx`.
 Generated voice-data resources are included from the central build directory.
 The Windows wrapper configures the project-cache path automatically. Drive C:
 is used only if drive D: does not exist.

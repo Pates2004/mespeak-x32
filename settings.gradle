@@ -1,11 +1,6 @@
 rootProject.name = 'mespeak-x32'
 
 // Keep local build state out of the source checkout.
-def sourcePath = settingsDir.canonicalPath.replace('\\', '/')
-def umbrella = 'D:/espeak-1.44.05-source'
 def materialsDrive = new File('D:/').exists() ? 'D:' : 'C:'
-def materialsName = sourcePath.equalsIgnoreCase(umbrella) ||
-        sourcePath.toLowerCase(Locale.ROOT).startsWith(umbrella.toLowerCase(Locale.ROOT) + '/') ?
-        'espeak-1.44.05-source' + sourcePath.substring(umbrella.length()) : settingsDir.name
-gradle.ext.projectMaterialsRoot = new File(materialsDrive + '/work/' + materialsName)
+gradle.ext.projectMaterialsRoot = new File(materialsDrive + '/work/Workspace/' + settingsDir.canonicalFile.name)
 gradle.startParameter.projectCacheDir = new File(gradle.ext.projectMaterialsRoot, '.gradle')

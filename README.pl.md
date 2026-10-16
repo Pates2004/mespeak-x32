@@ -2,13 +2,20 @@
 
 [English documentation](README.md)
 
-mespeak 1.44.05-r40 to silnik zamiany tekstu na mowę dla Androida. Integracja
+mespeak 1.44.05-r41 to silnik zamiany tekstu na mowę dla Androida. Integracja
 usługi, ustawień i JNI bazuje na eSpeak NG, a natywny syntezator oraz dane głosów
 pochodzą z rozwijanego klasycznego eSpeak 1.44.05, z naszym polskim słownikiem.
 
 Ta edycja obsługuje ABI `armeabi-v7a` i `x86` i używa identyfikatora `com.pates2004.mespeak.x32`.
 Druga edycja jest dostępna w [mespeak](https://github.com/Pates2004/mespeak).
 Obie mają te same funkcje i dane, a na liście aplikacji nazywają się mespeak.
+
+## Zmiany r41
+
+Zmieniono polską nazwę odczytywanego znaku ASCII `-` z „myślnik” na „minus”.
+Sprawdzono i zachowano sześć pełnych nazw nawiasów okrągłych, kwadratowych
+i klamrowych. Zmieniają się wyłącznie polski słownik, znacznik danych
+i metadane wydania; interfejs i prędkość Androida pozostają bez zmian.
 
 ## Zmiany r40
 
@@ -54,7 +61,7 @@ Wymowa, motywy, nazwy, ustawienia i algorytmy prędkości nie są zmieniane prze
 ## Instalacja i ustawienia
 
 Podpisany plik release znajduje się w
-`D:\work\espeak-1.44.05-source\mespeak-x32\installfiles`.
+`D:\espeak-1.44.05-source\mespeak-x32\installfiles`.
 `C:\work` jest używane wyłącznie wtedy, gdy dysk D: nie istnieje. Pierwsze otwarcie
 instaluje dołączone dane głosów przed wyświetleniem list, z wybranymi wszystkimi
 językami. Można przejść z aplikacji do systemowych ustawień zamiany tekstu na
@@ -128,10 +135,12 @@ istniejących wielowyrazowych nazw znaków i nazw nawiasów kwadratowych.
 ## Kompilacja i podpis
 
 Wymagane są JDK 17 oraz wersje SDK, NDK i CMake z `build.gradle`.
-Materiały kompilacji są w `D:\work\espeak-1.44.05-source\mespeak-x32`:
+Materiały kompilacji są w `D:\work\Workspace\mespeak-x32`:
 `build`, `.gradle` i `.cxx`. Wygenerowane zasoby słownika pochodzą z centralnego
 `build/generated`, a wrapper Windows sam ustawia ścieżkę pamięci podręcznej.
-Finalne APK są w centralnym `installfiles`, wcześniejsze wydania w `snapshots`.
+Finalne APK są w lokalnym `installfiles` przy tym repozytorium, wcześniejsze wydania
+w `D:\work\Snapshots\mespeak-x32`. Audyty są w `D:\work\Forme\mespeak-x32`,
+a zbędne pliki kompilacji w `D:\work\Trash\mespeak-x32`.
 Dysk C: jest używany wyłącznie wtedy, gdy dysk D: nie istnieje.
 Kompilacja deweloperska: `gradlew.bat assembleDebug`.
 Podpisany release: `powershell -ExecutionPolicy Bypass -File build-release.ps1`.

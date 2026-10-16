@@ -71,7 +71,7 @@ echo location of your Java installation. 1>&2
 @rem Setup the command line
 
 @rem Resolve the user's central project cache before Gradle opens any local state.
-for /f "delims=" %%i in ('powershell.exe -NoProfile -Command ". (Join-Path $env:APP_HOME 'project_materials.ps1'); Join-ProjectMaterialPath $env:APP_HOME '.gradle'"') do set PROJECT_CACHE_DIR=%%i
+for /f "delims=" %%i in ('powershell.exe -NoProfile -Command ". (Join-Path $env:APP_HOME 'project_materials.ps1'); Join-ProjectMaterialPath $env:APP_HOME 'Workspace\.gradle'"') do set PROJECT_CACHE_DIR=%%i
 if not defined PROJECT_CACHE_DIR exit /b 1
 
 
