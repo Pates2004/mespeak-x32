@@ -17,107 +17,90 @@
 package com.reecedunn.espeak.preference;
 
 import android.app.Activity;
-import android.app.DownloadManager;
+import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Environment;
-import android.preference.DialogPreference;
+import android.preference.Preference;
+import android.provider.OpenableColumns;
 import android.util.AttributeSet;
-import android.view.View;
-import android.widget.Spinner;
+import android.widget.Toast;
 
 import com.reecedunn.espeak.CheckVoiceData;
 import com.reecedunn.espeak.DownloadVoiceData;
 import com.reecedunn.espeak.EspeakApp;
-import com.reecedunn.espeak.FileListAdapter;
-import com.reecedunn.espeak.FileUtils;
 import com.reecedunn.espeak.R;
 
-import java.io.File;
-import java.io.FileFilter;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
+import java.io.InputStream;
 
-public class ImportVoicePreference extends DialogPreference {
-    private File mRoot;
-    private Spinner mDictionaries;
+/** Uses Android's document picker, including Downloads and document providers. */
+public class ImportVoicePreference extends Preference {
+    public static final int REQUEST_IMPORT_DICTIONARY = 2301;
 
     public ImportVoicePreference(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
-        setDialogLayoutResource(R.layout.import_voice_preference);
-        setLayoutResource(R.layout.information_view);
-        setPositiveButtonText(android.R.string.ok);
-        setNegativeButtonText(android.R.string.cancel);
-
-        mRoot = Environment.getExternalStorageDirectory();
     }
-
-    public ImportVoicePreference(Context context, AttributeSet attrs) {
-        this(context, attrs, 0);
-    }
-
-    public ImportVoicePreference(Context context) {
-        this(context, null);
-    }
-
-    public void setDescription(int resId) {
-        callChangeListener(getContext().getString(resId));
-    }
+    public ImportVoicePreference(Context context, AttributeSet attrs) { this(context, attrs, 0); }
+    public ImportVoicePreference(Context context) { this(context, null); }
 
     @Override
-    protected View onCreateDialogView() {
-        View root = super.onCreateDialogView();
-        mDictionaries = (Spinner)root.findViewById(R.id.dictionaries);
-        return root;
+    protected void onClick() {
+        try {
+            final Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("*/*");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            ((Activity) getContext()).startActivityForResult(intent, REQUEST_IMPORT_DICTIONARY);
+        } catch (RuntimeException e) {
+            showResult((Activity) getContext(), R.string.import_voice_failed);
+        }
     }
 
-    @Override
-    protected void onBindDialogView(View view) {
-        super.onBindDialogView(view);
-        File[] dictionaries = mRoot.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File file) {
-                return !file.isDirectory() && file.getName().endsWith("_dict");
+    public static void onDocumentResult(Activity activity, int resultCode, Intent result) {
+        if (resultCode != Activity.RESULT_OK) return;
+        final Uri uri = result == null ? null : result.getData();
+        if (uri == null) {
+            showResult(activity, R.string.import_voice_failed);
+            return;
+        }
+        Toast.makeText(activity, R.string.import_voice_working, Toast.LENGTH_SHORT).show();
+        new AsyncTask<Void, Void, Boolean>() {
+            @Override protected Boolean doInBackground(Void... ignored) {
+                try {
+                    String name = null;
+                    try (Cursor cursor = activity.getContentResolver().query(uri,
+                            new String[] { OpenableColumns.DISPLAY_NAME }, null, null, null)) {
+                        if (cursor != null && cursor.moveToFirst()) name = cursor.getString(0);
+                    }
+                    name = CheckVoiceData.importedDictionaryName(name);
+                    final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                    try (InputStream input = activity.getContentResolver().openInputStream(uri)) {
+                        if (input == null) throw new IOException("Document is unavailable");
+                        final byte[] buffer = new byte[10240];
+                        int count;
+                        while ((count = input.read(buffer)) != -1) bytes.write(buffer, 0, count);
+                    }
+                    CheckVoiceData.installImportedDictionary(EspeakApp.getStorageContext(), name,
+                        bytes.toByteArray());
+                    activity.sendBroadcast(new Intent(DownloadVoiceData.BROADCAST_LANGUAGES_UPDATED));
+                    return true;
+                } catch (Exception e) {
+                    return false;
+                }
             }
-        });
-        if (dictionaries != null) {
-            Arrays.sort(dictionaries);
-            mDictionaries.setAdapter(new FileListAdapter((Activity) getContext(), dictionaries));
-        }
+            @Override protected void onPostExecute(Boolean success) {
+                showResult(activity, success ? R.string.import_voice_succeeded : R.string.import_voice_failed);
+            }
+        }.execute();
     }
 
-    @Override
-    public void onClick(DialogInterface dialog, int which) {
-        switch (which) {
-            case DialogInterface.BUTTON_POSITIVE:
-                new AsyncTask<Object,Object,File>() {
-                    @Override
-                    protected File doInBackground(Object... objects) {
-                        File source = (File)mDictionaries.getSelectedItem();
-                        if (source != null) {
-                            try {
-                                CheckVoiceData.installImportedDictionary(EspeakApp.getStorageContext(), source);
-                                return source;
-                            } catch (IOException e) {
-                            }
-                        }
-                        return null;
-                    }
-
-                    @Override
-                    protected void onPostExecute(File file) {
-                        if (file != null) {
-                            final Intent intent = new Intent(DownloadVoiceData.BROADCAST_LANGUAGES_UPDATED);
-                            getContext().sendBroadcast(intent);
-                        }
-                    }
-                }.execute();
-                break;
-        }
-        super.onClick(dialog, which);
+    private static void showResult(Activity activity, int message) {
+        if (activity.isFinishing() || activity.isDestroyed()) return;
+        new AlertDialog.Builder(activity).setTitle(R.string.import_voice_title)
+            .setMessage(message).setPositiveButton(android.R.string.ok, null).show();
     }
 }

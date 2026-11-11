@@ -59,7 +59,10 @@
   <string name="variant_croak">Rechotliwy</string>
   <string name="variant_whisper">Szeptany</string>
   <string name="import_voice_title">Importuj słownik eSpeak</string>
-  <string name="import_voice_description">Zaimportuj plik słownika głosowego eSpeak z karty SD.</string>
+  <string name="import_voice_description">Wybierz plik słownika eSpeak _dict lub pl.dict ze swoich dokumentów.</string>
+  <string name="import_voice_working">Importowanie słownika…</string>
+  <string name="import_voice_succeeded">Słownik został zaimportowany.</string>
+  <string name="import_voice_failed">Nie udało się zaimportować słownika. Wybierz dostępny, niepusty plik eSpeak _dict lub pl.dict. Poprzednie słowniki zostały zachowane.</string>
   <string name="preserve_imported_dictionaries_title">Zachowuj importowane słowniki przy aktualizacji</string>
   <string name="preserve_imported_dictionaries_summary">Domyślnie włączone. Po wyłączeniu następna aktualizacja danych usunie importy i użyje słowników z aplikacji.</string>
   <string name="open_system_tts_settings_title">Przejdź do ustawień zamiany tekstu na mowę</string>

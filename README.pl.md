@@ -2,13 +2,34 @@
 
 [English documentation](README.md)
 
-mespeak 1.44.05-r41 to silnik zamiany tekstu na mowę dla Androida. Integracja
+mespeak 1.44.05-r42 to silnik zamiany tekstu na mowę dla Androida. Integracja
 usługi, ustawień i JNI bazuje na eSpeak NG, a natywny syntezator oraz dane głosów
 pochodzą z rozwijanego klasycznego eSpeak 1.44.05, z naszym polskim słownikiem.
 
 Ta edycja obsługuje ABI `armeabi-v7a` i `x86` i używa identyfikatora `com.pates2004.mespeak.x32`.
 Druga edycja jest dostępna w [mespeak](https://github.com/Pates2004/mespeak).
 Obie mają te same funkcje i dane, a na liście aplikacji nazywają się mespeak.
+
+## Zmiany r42
+
+Import używa systemowego wyboru dokumentu, również z Pobranych, i pokazuje
+dostępny komunikat powodzenia lub błędu. Można wybrać plik `_dict` albo `pl.dict`,
+który jest instalowany jako `pl_dict`. Aktualizacja danych i import odbywają się
+przez przygotowanie kompletnych plików, dziennik i kopię poprzednich danych.
+Przerwana operacja jest odzyskiwana przed użyciem silnika. Wyłączenie zachowywania
+importów usuwa je dopiero przy udanej aktualizacji. Dostępność języka, domyślny
+głos i podgląd mowy spójnie korzystają z dostępnego języka, również gdy włączony
+jest tylko polski, a system jest angielski.
+
+Domyślny słownik poprawia akcent rodziny Monika, używa starannego akcentu
+w „muzyka” i „minimum” oraz polskiej afrykaty w liczbach 30/40/200. Liczby 20 i 300
+są bez zmian. Alternatywny [mydict](mydict/README.pl.md) zawiera udokumentowany
+potoczny styl akcentowania i starszą wymowę liczb. Oba słowniki mają te same
+bieżące pozostałe poprawki. Aby włączyć alternatywę, zaimportuj `mydict/pl.dict`.
+Aby wrócić do wersji domyślnej, pobierz `engine/espeak-data/pl_dict` z tego samego
+tagu wydania i zaimportuj go. Zachowany świadomy import nadal ma pierwszeństwo
+przed słownikiem dołączonym do aplikacji. To nadal jeden APK i jeden silnik;
+te poprawki nie dodają usługi tła ani nie zmieniają algorytmów prędkości mowy.
 
 ## Zmiany r41
 

@@ -76,6 +76,10 @@ public class CheckVoiceData extends Activity {
         "ee98069936bdb9c1e098af8cbbb504cbc4b4bfc7",
         "a1160dfdbdf5df60815391d81e67ac9d682af25e",
         "068f7cbff5f1f8a013018c9a4bf7e04a85965762",
+        "392115ca715cd80c10aa2b9e182d5ec0b361d714",
+        "027d2ff8e4fda073ce548b1658a44b2ebac03bb3",
+        "501e07b3e011d3b68ed1d89c85edae9f5667d8d5",
+        "3ec56cf1c39debd6624d4070a22ae4f0139500d0",
     };
 
     public static File getDataPath(Context context) {
@@ -116,7 +120,6 @@ public class CheckVoiceData extends Activity {
 
     public static synchronized boolean extractVoiceData(Context context) {
         synchronized (CoreState.LOCK) {
-            CoreState.invalidateVoice();
             return extractVoiceDataLocked(context);
         }
     }
@@ -130,72 +133,89 @@ public class CheckVoiceData extends Activity {
             return false;
         }
         final File dataPath = getDataPath(context);
-        final InputStream stream = context.getResources().openRawResource(R.raw.espeakdata);
-        final ZipInputStream zipStream = new ZipInputStream(new BufferedInputStream(stream));
-        final File outputDir = dataPath.getParentFile();
-
+        final FileTransaction transaction = transaction(context);
         try {
+            recoverDataLocked(context);
             final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
             final boolean preserveImports = prefs.getBoolean(
                 EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, true);
             final boolean migrationPending = !prefs.getBoolean(PREF_LEGACY_IMPORTS_HANDLED, false);
             final boolean scanLegacy = migrationPending
                 && isLegacyStorageReady(context);
-            if (preserveImports && migrationPending) {
-                preserveLegacyImportedDictionaries(context, scanLegacy);
+            transaction.begin(dataPath, getImportedDictionaryPath(context));
+            final File outputDir = transaction.staged(0);
+            final File retained = transaction.staged(1);
+            FileTransaction.mkdir(outputDir);
+            FileTransaction.mkdir(retained);
+            copyTree(getImportedDictionaryPath(context), retained);
+            if (preserveImports) {
+                if (migrationPending) {
+                    preserveLegacyImportedDictionaries(context, scanLegacy, retained);
+                }
+            } else {
+                final File[] saved = retained.listFiles();
+                if (saved == null) throw new IOException("Cannot inspect staged imports");
+                for (File dictionary : saved) {
+                    if (dictionary.isFile() && dictionary.getName().endsWith("_dict")) {
+                        FileTransaction.remove(dictionary);
+                    }
+                }
             }
-            FileUtils.rmdir(dataPath);
             final String canonicalOutputDirPath = outputDir.getCanonicalPath() + File.separator;
             final byte[] buffer = new byte[10240];
             int bytesRead;
             ZipEntry entry;
-
-            while ((entry = zipStream.getNextEntry()) != null) {
-                final File file = new File(outputDir, entry.getName());
-                if (!file.getCanonicalPath().startsWith(canonicalOutputDirPath)) {
-                    throw new SecurityException("Zip entry outside target dir: " + entry.getName());
-                }
-                // Commit the data marker only after imports have been
-                // restored or discarded successfully.
-                if ("espeak-ng-data/version".equals(entry.getName())) {
-                    zipStream.closeEntry();
-                    continue;
-                }
-                if (entry.isDirectory()) {
-                    file.mkdirs();
-                    continue;
-                }
-                file.getParentFile().mkdirs();
-                final FileOutputStream outputStream = new FileOutputStream(file);
-                try {
-                    while ((bytesRead = zipStream.read(buffer)) != -1) {
-                        outputStream.write(buffer, 0, bytesRead);
+            try (ZipInputStream zipStream = new ZipInputStream(new BufferedInputStream(
+                    context.getResources().openRawResource(R.raw.espeakdata)))) {
+                while ((entry = zipStream.getNextEntry()) != null) {
+                    final String prefix = "espeak-ng-data/";
+                    if ("espeak-ng-data/".equals(entry.getName())) continue;
+                    if (!entry.getName().startsWith(prefix)) throw new IOException("Unexpected archive entry");
+                    final File file = new File(outputDir, entry.getName().substring(prefix.length()));
+                    if (!file.getCanonicalPath().startsWith(canonicalOutputDirPath)) {
+                        throw new SecurityException("Zip entry outside target dir: " + entry.getName());
                     }
-                } finally {
-                    outputStream.close();
+                    // Commit the data marker only after imports have been
+                    // restored or discarded successfully.
+                    if ("espeak-ng-data/version".equals(entry.getName())) {
+                        zipStream.closeEntry();
+                        continue;
+                    }
+                    if (entry.isDirectory()) {
+                        FileTransaction.mkdir(file);
+                        continue;
+                    }
+                    FileTransaction.mkdir(file.getParentFile());
+                    final FileOutputStream outputStream = new FileOutputStream(file);
+                    try {
+                        while ((bytesRead = zipStream.read(buffer)) != -1) {
+                            outputStream.write(buffer, 0, bytesRead);
+                        }
+                        outputStream.getFD().sync();
+                    } finally {
+                        outputStream.close();
+                    }
+                    zipStream.closeEntry();
                 }
-                zipStream.closeEntry();
             }
-
-            if (preserveImports) {
-                restoreImportedDictionaries(context);
-            } else {
-                discardRetainedDictionaries(context);
+            if (preserveImports) restoreImportedDictionaries(retained, outputDir);
+            writeDurable(new File(outputDir, "version"), version.getBytes("UTF-8"));
+            for (String resource : BASE_RESOURCES) {
+                if (!new File(outputDir, resource).isFile()) throw new IOException("Incomplete bundled data");
             }
-            FileUtils.write(new File(getDataPath(context), "version"), version);
+            transaction.commit();
+            CoreState.invalidateVoice();
             if (scanLegacy && !prefs.edit().putBoolean(PREF_LEGACY_IMPORTS_HANDLED, true).commit()) {
-                throw new IOException("Failed to record legacy import migration");
+                // Data publication already succeeded. Retrying the idempotent
+                // migration later is safe; reporting a failed update here would
+                // incorrectly suggest that the old dictionary is still active.
+                Log.w(TAG, "Legacy migration metadata will be retried");
             }
             return true;
         } catch (Exception e) {
+            try { transaction.abortPrepared(); } catch (IOException recovery) { e.addSuppressed(recovery); }
             Log.e(TAG, "Failed to extract voice data", e);
             return false;
-        } finally {
-            try {
-                zipStream.close();
-            } catch (IOException e) {
-                // ignored
-            }
         }
     }
 
@@ -205,21 +225,38 @@ public class CheckVoiceData extends Activity {
 
     public static synchronized void installImportedDictionary(Context context, File source)
             throws IOException {
-        synchronized (CoreState.LOCK) {
-            installImportedDictionaryLocked(context, source);
-        }
+        if (!source.isFile()) throw new IOException("Not a dictionary file");
+        installImportedDictionary(context, source.getName(), FileUtils.readBinary(source));
     }
 
-    private static void installImportedDictionaryLocked(Context context, File source)
-            throws IOException {
-        if (!source.isFile() || !source.getName().endsWith("_dict")) {
-            throw new IOException("Not a dictionary file");
+    public static String importedDictionaryName(String name) throws IOException {
+        if ("pl.dict".equals(name)) return "pl_dict";
+        if (name == null || !name.matches("[A-Za-z0-9][A-Za-z0-9_-]*_dict")) {
+            throw new IOException("Not a dictionary filename");
         }
-        final byte[] contents = FileUtils.readBinary(source);
-        final File retained = new File(getImportedDictionaryPath(context), source.getName());
-        CoreState.invalidateVoice();
-        FileUtils.write(retained, contents);
-        FileUtils.write(new File(getDataPath(context), source.getName()), contents);
+        return name;
+    }
+
+    public static synchronized void installImportedDictionary(Context context, String name, byte[] contents)
+            throws IOException {
+        name = importedDictionaryName(name);
+        if (contents == null || contents.length == 0) throw new IOException("Empty dictionary");
+        synchronized (CoreState.LOCK) {
+            recoverDataLocked(context);
+            if (!hasBaseResources(context)) throw new IOException("Voice data unavailable");
+            final FileTransaction transaction = transaction(context);
+            try {
+                transaction.begin(new File(getImportedDictionaryPath(context), name),
+                    new File(getDataPath(context), name));
+                writeDurable(transaction.staged(0), contents);
+                writeDurable(transaction.staged(1), contents);
+                transaction.commit();
+                CoreState.invalidateVoice();
+            } catch (IOException failure) {
+                try { transaction.abortPrepared(); } catch (IOException recovery) { failure.addSuppressed(recovery); }
+                throw failure;
+            }
+        }
     }
 
     private static boolean isLegacyStorageReady(Context context) {
@@ -230,7 +267,7 @@ public class CheckVoiceData extends Activity {
         return users != null && users.isUserUnlocked();
     }
 
-    private static void preserveLegacyImportedDictionaries(Context context, boolean scanLegacy)
+    private static void preserveLegacyImportedDictionaries(Context context, boolean scanLegacy, File retained)
             throws Exception {
         final List<File> installed = new ArrayList<File>();
         final File[] active = getDataPath(context).listFiles();
@@ -263,7 +300,6 @@ public class CheckVoiceData extends Activity {
         } finally {
             archive.close();
         }
-        final File retained = getImportedDictionaryPath(context);
         for (File dictionary : installed) {
             if (!dictionary.isFile() || !dictionary.getName().endsWith("_dict")) continue;
             final File saved = new File(retained, dictionary.getName());
@@ -273,7 +309,7 @@ public class CheckVoiceData extends Activity {
             if ("pl_dict".equals(dictionary.getName()) && isPreviouslyBundledPolish(oldBytes)) {
                 continue;
             }
-            FileUtils.write(saved, oldBytes);
+            writeDurable(saved, oldBytes);
         }
     }
 
@@ -290,36 +326,64 @@ public class CheckVoiceData extends Activity {
         return false;
     }
 
-    private static void restoreImportedDictionaries(Context context) throws IOException {
-        synchronized (CoreState.LOCK) {
-            CoreState.invalidateVoice();
-            restoreImportedDictionariesLocked(context);
-        }
-    }
-
-    private static void restoreImportedDictionariesLocked(Context context) throws IOException {
-        final File[] imported = getImportedDictionaryPath(context).listFiles();
-        if (imported == null) return;
+    private static void restoreImportedDictionaries(File retained, File data) throws IOException {
+        final File[] imported = retained.listFiles();
+        if (imported == null) throw new IOException("Cannot inspect retained dictionaries");
         for (File dictionary : imported) {
             if (!dictionary.isFile() || !dictionary.getName().endsWith("_dict")) continue;
-            FileUtils.write(new File(getDataPath(context), dictionary.getName()),
+            writeDurable(new File(data, dictionary.getName()),
                 FileUtils.readBinary(dictionary));
         }
     }
 
-    private static void discardRetainedDictionaries(Context context) throws IOException {
-        final File[] retained = getImportedDictionaryPath(context).listFiles();
-        if (retained == null) return;
-        for (File dictionary : retained) {
-            if (!dictionary.isFile() || !dictionary.getName().endsWith("_dict")) continue;
-            if (!dictionary.delete() && dictionary.exists()) {
-                throw new IOException("Failed to discard imported dictionary");
+    private static void copyTree(File source, File target) throws IOException {
+        if (!source.exists()) return;
+        if (source.isDirectory()) {
+            FileTransaction.mkdir(target);
+            final File[] children = source.listFiles();
+            if (children == null) throw new IOException("Cannot inspect dictionaries");
+            for (File child : children) copyTree(child, new File(target, child.getName()));
+        } else {
+            writeDurable(target, FileUtils.readBinary(source));
+        }
+    }
+
+    private static void writeDurable(File target, byte[] contents) throws IOException {
+        FileTransaction.mkdir(target.getParentFile());
+        try (FileOutputStream output = new FileOutputStream(target)) {
+            output.write(contents);
+            output.getFD().sync();
+        }
+    }
+
+    private static FileTransaction transaction(Context context) {
+        return new FileTransaction(new File(context.getDir("dictionary_transactions", MODE_PRIVATE), "current"),
+            getDataPath(context), getImportedDictionaryPath(context));
+    }
+
+    private static void recoverDataLocked(Context context) throws IOException {
+        final FileTransaction transaction = transaction(context);
+        if (transaction.isPending()) {
+            try {
+                if (transaction.recover()) CoreState.invalidateVoice();
+            } catch (IOException failure) {
+                CoreState.invalidateVoice();
+                throw failure;
             }
         }
     }
 
     /** Ensures that bundled voice data is ready before the native engine starts. */
     public static synchronized boolean ensureVoiceData(Context context) {
+        if (transaction(context).isPending()) {
+            synchronized (CoreState.LOCK) {
+                try { recoverDataLocked(context); }
+                catch (IOException e) {
+                    Log.e(TAG, "Failed to recover voice data", e);
+                    return false;
+                }
+            }
+        }
         if (hasBaseResources(context) && !canUpgradeResources(context)) {
             // Direct Boot may have delayed access to older credential storage.
             // Finish that one-time migration after unlock without reinstalling
@@ -327,16 +391,8 @@ public class CheckVoiceData extends Activity {
             final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
             if (prefs.getBoolean(PREF_LEGACY_IMPORTS_HANDLED, false)
                     || !isLegacyStorageReady(context)) return true;
-            try {
-                if (prefs.getBoolean(EspeakApp.PREF_PRESERVE_IMPORTED_DICTIONARIES, true)) {
-                    preserveLegacyImportedDictionaries(context, true);
-                    restoreImportedDictionaries(context);
-                }
-                return prefs.edit().putBoolean(PREF_LEGACY_IMPORTS_HANDLED, true).commit();
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to migrate legacy dictionaries", e);
-                return false;
-            }
+            // Use the same publication transaction for delayed legacy migration.
+            return extractVoiceData(context);
         }
         return extractVoiceData(context) && hasBaseResources(context);
     }
@@ -350,15 +406,12 @@ public class CheckVoiceData extends Activity {
         ArrayList<String> availableLanguages = new ArrayList<String>();
         ArrayList<String> unavailableLanguages = new ArrayList<String>();
 
-        if (!hasBaseResources(storageContext) || canUpgradeResources(storageContext)) {
-            // Android may issue CHECK_TTS_DATA before it binds TtsService on a
-            // fresh installation. Install the bundled data here as well so
-            // Settings does not cache an empty language list until reopened.
-            if (!ensureVoiceData(storageContext)) {
-                unavailableLanguages.add(Locale.ENGLISH.toString());
-                returnResults(Engine.CHECK_VOICE_DATA_FAIL, availableLanguages, unavailableLanguages);
-                return;
-            }
+        // Also recover pending publication before accepting a complete marker.
+        // Android may check data before it binds TtsService on a fresh install.
+        if (!ensureVoiceData(storageContext)) {
+            unavailableLanguages.add(Locale.ENGLISH.toString());
+            returnResults(Engine.CHECK_VOICE_DATA_FAIL, availableLanguages, unavailableLanguages);
+            return;
         }
 
         final SpeechSynthesis engine = new SpeechSynthesis(storageContext, mSynthReadyCallback);

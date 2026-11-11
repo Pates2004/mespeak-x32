@@ -47,6 +47,7 @@ function Invoke-NativeCommand {
     if ($exitCode -ne 0) { throw $FailureMessage }
 }
 
+& (Join-Path $repoRoot 'mydict\rebuild.ps1') -VerifyOnly
 if (-not $SkipBuild) {
     Push-Location -LiteralPath $repoRoot
     try {
@@ -122,7 +123,7 @@ $installFiles = Join-ProjectMaterialPath $repoRoot 'installfiles'
 New-Item -ItemType Directory -Path $installFiles -Force | Out-Null
 $installerCopy = Join-Path $installFiles ([IO.Path]::GetFileName($signedApk))
 if (Test-Path -LiteralPath $installerCopy) {
-    throw 'Archive the existing version in snapshots before replacing it.'
+    throw 'Move the existing file to its reviewed central destination before replacing it.'
 }
 $signedHash = (Get-FileHash -LiteralPath $signedApk).Hash
 $resolvedSigned = [IO.Path]::GetFullPath($signedApk)

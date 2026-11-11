@@ -178,6 +178,20 @@ public class TtsService extends TextToSpeechService {
 
     private Pair<Voice, Integer> getDefaultVoiceFor(String language, String country, String variant) {
         final Pair<Voice, Integer> match = findVoice(language, country, variant);
+        if (match.second == TextToSpeech.LANG_NOT_SUPPORTED) {
+            synchronized (mAvailableVoices) {
+                if (mMatchingVoice != null && mAvailableVoices.containsKey(mMatchingVoice.name)) {
+                    return new Pair<>(mMatchingVoice, TextToSpeech.LANG_AVAILABLE);
+                }
+                // Keep availability, default name and preview consistent when
+                // the requested system language has been disabled.
+                Voice fallback = null;
+                for (Voice available : mAvailableVoices.values()) {
+                    if (fallback == null || available.name.compareTo(fallback.name) < 0) fallback = available;
+                }
+                if (fallback != null) return new Pair<>(fallback, TextToSpeech.LANG_AVAILABLE);
+            }
+        }
         switch (match.second) {
             case TextToSpeech.LANG_AVAILABLE:
                 if (language.equals("fr") || language.equals("fra")) {
@@ -199,18 +213,7 @@ public class TtsService extends TextToSpeechService {
 
     @Override
     protected int onIsLanguageAvailable(String language, String country, String variant) {
-        final int result = findVoice(language, country, variant).second;
-        if (result == TextToSpeech.LANG_NOT_SUPPORTED) {
-            // When the requested language is filtered out but other voices are
-            // available, report the language as available so that screen readers
-            // (e.g. Jieshuo) don't skip this engine entirely.
-            synchronized (mAvailableVoices) {
-                if (!mAvailableVoices.isEmpty()) {
-                    return TextToSpeech.LANG_AVAILABLE;
-                }
-            }
-        }
-        return result;
+        return getDefaultVoiceFor(language, country, variant).second;
     }
 
     @Override
@@ -221,19 +224,6 @@ public class TtsService extends TextToSpeechService {
                 mMatchingVoice = match.first;
             }
             return match.second;
-        }
-        if (match.second == TextToSpeech.LANG_NOT_SUPPORTED) {
-            // Fall back to a previously selected or available voice so that
-            // screen readers requesting the system language still get speech.
-            synchronized (mAvailableVoices) {
-                if (mMatchingVoice != null) {
-                    return TextToSpeech.LANG_AVAILABLE;
-                }
-                if (!mAvailableVoices.isEmpty()) {
-                    mMatchingVoice = mAvailableVoices.values().iterator().next();
-                    return TextToSpeech.LANG_AVAILABLE;
-                }
-            }
         }
         return match.second;
     }

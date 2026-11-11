@@ -42,8 +42,8 @@ android {
         applicationId = "com.pates2004.mespeak.x32"
         minSdk = 21
         targetSdk = 34
-        versionCode = 41
-        versionName = "1.44.05-r41"
+        versionCode = 42
+        versionName = "1.44.05-r42"
         resConfigs "en", "pl"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -80,8 +80,12 @@ android {
             res.srcDirs = ['res', generatedResources.get().asFile]
         }
         androidTest {
+            manifest.srcFile('eSpeakTests/AndroidManifest.xml')
             java.srcDirs = ['eSpeakTests/src']
             res.srcDirs = ['eSpeakTests/res']
+        }
+        test {
+            java.srcDirs = ['unitTests']
         }
     }
 

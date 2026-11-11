@@ -1,0 +1,948 @@
+ 
+// This file is UTF8 encoded 
+// Spelling to phoneme words and exceptions for Polish
+
+.L01	ka ki ce kę ką ko kach kom
+//.L02	a i ę ą o
+
+//.L03	a em ie owi o
+
+//.L04	iego iemu ich imi im i
+
+//.L05	o ę y ów ach ami a
+
+//.L06 o a em ie
+
+//.L07 to ta tem cie tami tom t
+
+//.L08	a u ie em owi
+
+//.L09	ach ami ów a ę y ą owie o
+
+//.L10 a em owi ie u ach ami om
+
+//.L11 a iem u
+
+.group	 a
+		a		a
+		a	(_	a_
+	_)	arcy	(@P4t	aRtsy
+
+	@ł)	a	(by_	=a
+	@ł)	a	(bym_	=a
+	@ł)	a	(byś_	=a
+
+	@)	a	(łby_	=a
+	@)	a	(łbym_	=a
+	@)	a	(łbyś_	=a
+
+.group	 ą
+		ą		O~
+		ą	(_	O~_
+		ą	(_A	O~_
+		ą	(p	Om
+		ą	(b	Om
+		ą	(t	On
+		ą	(c	On
+		ą	(d	On
+		ą	(ć	On^
+		ą	(dź	On^
+		ą	(ci	On^
+		ą	(dzi	On^
+		ą	(k	ON
+		ą	(g	ON
+		ą	(l	O
+		ą	(ł	O
+
+.group	 b
+
+		b		b
+	ja)	bł	(kA	b_w
+		b	(_	p
+		b	(i	b;
+		bi	(A	b;j
+
+.group	 c
+
+		c		ts
+		ch		h
+		ch	(i	C
+		chi	(A	hj
+	psy)	chi	(a	hi
+	_)	c	(irca_	ts	// exact word circa: keep hard c
+	_)	c	(ito_	ts
+		c	(i	ts;
+		ci	(A	ts;
+	li)	ci	(o_	sj
+	li)	ci	(ą_	sj
+	li)	ci	(ę_	sj
+	li)	ci	(i_	sj
+	li)	ci	(a_	sj
+
+		cz		tS
+
+.group	 ć
+		ć		ts;
+		ć	(b	dz;
+		ć	(g	dz;
+
+.group	 d
+		d		d
+		d	(_	t
+		d	(i	d;
+		di	(A	dj
+		dz		dz
+		dz	(_	ts
+		dz	(i	dz;
+		dzi	(A	dz;
+	_na)	dzi	(em	d|Z;
+	_po)	dzi	(em	d|Z;
+		dź		dz;
+		dź	(_	ts;
+		dż		dZ
+		dż	(_	tS
+
+	_o)	dż		d|Z
+	_po)	dż		d|Z
+	_na)	dż		d|Z
+	_pona)	dż		d|Z
+
+.group	 e
+		e		E
+        i)      e (_		E#
+
+	@)	e	(Cłbym_	=E
+	@)	e	(Cłbyś_	=E
+	@)	e	(Cłby_	=E
+
+
+		e	(_A	E_
+
+.group	 ~
+		~
+
+.group	 ę
+		ę		E~
+		ę	(_	E
+		ę	(_A	E_
+		ę	(p	Em
+		ę	(b	Em
+		ę	(t	En
+		ę	(c	En
+		ę	(d	En
+		ęć	(dzie	En^
+		ę	(dzi	En^
+		ę	(ci	En^
+		ę	(ć	En^
+		ę	(si	En^
+		ę	(ś	En^
+		ę	(dź	En^
+		ę	(k	EN
+		ę	(g	EN
+		ę	(l	E
+		ę	(ł	E
+	i)	ę	(tna	E
+
+.group	 f
+		f		f
+		fi	(A	f;j
+
+.group	 g
+		g		g
+		g	(i	g;
+	hi)	gi	(e	gj
+		g	(_	k
+		gł	(_	gw
+
+.group	 h
+		h		x
+		hi	(A	xj
+		h	(i	C
+
+.group	 i
+		i		i
+		i	(A_+	j
+	A)	i	(A	j
+	C)	i	(A	;
+
+	_kl)	i	(e	;ij
+	żm)	ii	(_	iji
+	rak)	ii	(_	iji
+
+	C)	ie	(_	;E#
+
+
+	_ep) i (L01 i
+	_rytm) i (L01_ i
+	_term) i (L01_ i
+
+	_domin) i (kom_++ i
+	_domin) i (kach_++ i
+	_domin) i (ko_++ i
+	_domin) i (ką_++ i
+	_domin) i (kę_++ i
+	_domin) i (ce_++ i
+	_domin) i (ki_++ i
+	_domin) i (ka_++ i
+	_mon) i (kom_++ i
+	_mon) i (kach_++ i
+	_mon) i (ko_++ i
+	_mon) i (ką_++ i
+	_mon) i (kę_++ i
+	_mon) i (ce_++ i
+	_mon) i (ki_++ i
+	_mon) i (ka_++ i
+	_weron) i (kom_++ i
+	_weron) i (kach_++ i
+	_weron) i (ko_++ i
+	_weron) i (ką_++ i
+	_weron) i (kę_++ i
+	_weron) i (ce_++ i
+	_weron) i (ki_++ i
+	_weron) i (ka_++ i
+
+	_ton) i (ka_ i
+	_ton) i (ki_ i
+	_ton) i (kach_ i
+	tekton) i (ka_ i
+	tekton) i (ki_ i
+	tekton) i (kach_ i
+	taton) i (ka_ i
+	taton) i (ki_ i
+	taton) i (kach_ i
+	ton) i (ce_ i
+	ton) i (kę_ i
+	ton) i (ką_ i
+	ton) i (ko_ i
+
+	@alm) i (L01_ i
+	@aul) i (L01_ i
+	@bol) i (L01_ i
+	@cha) i (L01_ i
+	@chn) i (L01_ i
+	@cyf) i (L01_ i
+	@eon) i (L01_ i
+	@epl) i (L01_ i
+	@erm) i (L01_ i
+	@ero) i (L01_ i
+	@fon) i (L01_ i
+	@gan) i (L01_ i
+	@gen) i (L01_ i
+	@gog) i (L01_ i
+	@han) i (L01_ i
+	@hol) i (L01_ i
+	@ion) i (L01_ i
+	@ipp) i (L01_ i
+	@jsm) i (L01_ i
+	@kom) i (L01_ i
+	@lab) i (L01_ i
+	@law) i (L01_ i
+	@lem) i (L01_ i
+	@lif) i (L01_ i
+	@lin) i (L01_ i
+	log) i (L01_ i
+	mim) i (L01_ i
+	@mon) i (L01_ i
+	@mun) i (L01_ i
+	@nam) i (L01_ i
+	@nem) i (L01_ i
+	@nim) i (L01_ i
+	@nom) i (L01_ i
+	@non) i (L01_ i
+	@orm) i (L01_ i
+	@oza) i (L01_ i
+	@pon) i (L01_ i
+	@raf) i (L01_ i
+	@rag) i (L01_ i
+	@ram) i (L01_ i
+	@rof) i (L01_ i
+	@rom) i (L01_ i
+	@ron) i (L01_ i
+	@rop) i (L01_ i
+	@sem) i (L01_ i
+	@tal) i (L01_ i
+	@tan) i (L01_ i
+	@uan) i (L01_ i
+	@ubl) i (L01_ i
+	@uda) i (L01_ i
+	@urg) i (L01_ i
+	@ych) i (L01_ i
+	@ykl) i (L01_ i
+	@ytm) i (L01_ i
+
+		i	(łby_	=i
+		i	(łbym_	=i
+		i	(łbyś_	=i
+	@l)	i	(by_	=i
+	@n)	i	(by_	=i
+	@l)	i	(śmy_	=i
+	@n)	i	(ście_	=i
+	@l)	i	(ście_	=i
+
+	@)	i	(byśmy_	=i
+	@)	i	(byście_	=i
+
+	@C)	ie	(libyśmy_	=;E
+	@C)	ie	(libyście_	=;E
+	@C)	ie	(liby_	=;E
+
+	@C)	ia	(łybyśmy_	=;a
+	@C)	ia	(łybyście_	=;a
+	@C)	ia	(łyby_	=;a
+
+.group	 j
+		j		j
+
+.group	 k
+		k		k
+//		k	(i	c
+		kł	(_	kw
+//		ki	(A	kj
+
+.group	 l
+		l		l
+		l	(_	l_
+		li	(A	lj
+	_po)	li	(A	li
+
+.group	 ł
+		ł		w
+	A)	ł	(_	w_
+	mys)	ł	(_	w_
+		ł	(_
+
+	@)	łbym	(_S1	m   // reduce entries in pl_list (jonsd)
+	@)	łbyś	(_S1	S;
+
+.group	 m
+		m		m
+		m	(_	m_
+	A)	mi	(A	mj
+	_zie)	mi	(A	m;
+	_)	mj	(rA	majO
+
+.group	 n
+		n		n
+		n	(_	n_
+		n	(i	n^
+		ni	(A	n^;
+		n	(k	N
+		n	(g	N
+		n	(ć	n^
+		n	(ci	n^
+		n	(dź	n^
+		n	(dzi	n^
+
+		ny	('emu_	n^;
+		ny	('ego_	n^;
+
+.group	 ń
+		ń		n^
+
+.group	 o
+		o		O
+		o	(_A	O:_
+
+.group	 ó
+		ó		u
+	@)	ó	(Cłbym_	=u
+	@)	ó	(Cłbyś_	=u
+	@)	ó	(Cłby_	=u
+
+.group	 p
+		p		p
+
+	_ko)	pi	(A	pj
+	_fotoko)	pi	(A	pj
+
+
+.group	 q
+		q		k
+
+.group	 r
+		r		R
+	A_)	r	(A	R
+	K)	r	(A	R
+		ri	(A	Rj
+		rz		Z
+	_ta)	rz	(an	Rz
+		rz	(_	S
+		rz	(and	Rts
+	_mu)	rz	(asichl	Rz
+	_mu)	rz	(o_+++	Rz
+	_mu)	rz	(owie_+++	Rz
+	_mu)	rz	(ą_+++	Rz
+	_mu)	rz	(y_+++	Rz
+	_mu)	rz	(ę_+++	Rz
+	_mu)	rz	(a_+++	Rz
+	_mu)	rz	(ów_+++	Rz
+	_mu)	rz	(ami_+++	Rz
+	_mu)	rz	(ach_+++	Rz
+	_mi)	rz	(o_+++	Rz
+	_mi)	rz	(owie_+++	Rz
+	_mi)	rz	(ą_+++	Rz
+	_mi)	rz	(y_+++	Rz
+	_mi)	rz	(ę_+++	Rz
+	_mi)	rz	(a_+++	Rz
+	_mi)	rz	(ów_+++	Rz
+	_mi)	rz	(ami_+++	Rz
+	_mi)	rz	(ach_+++	Rz
+	c)	rz	(A	S
+	ć)	rz	(A	S
+	cz)	rz	(A	S
+	f)	rz	(A	S
+	h)	rz		S
+	k)	rz		S
+	p)	rz		S
+	s)	rz	(A	S
+	ś)	rz	(A	S
+	sz)	rz	(A	S
+	t)	rz		S
+		rz	(ini_	Rts
+		rz	(inim_	Rts
+		rz	(inimi_	Rts
+		rz	(inich_	Rts
+		rz	(iniemu_	Rts
+		rz	(iniego_	Rts
+		rz	(oni_	Rts
+		rz	(onim_	Rts
+		rz	(onimi_	Rts
+		rz	(onich_	Rts
+		rz	(oniemu_	Rts
+		rz	(oniego_	Rts
+		r	(zi	R
+	A)	r	(zł	R
+	ma)	r	(zn	R
+	ma)	r	(zlin	R
+	_zama)	r	(za	R
+	_zma)	r	(za	R
+	odma)	r	(za	R
+	_bo)	r	(zoj	R
+
+.group	 s
+	_qua)	s	(i_	s	// exact word quasi: keep hard s
+
+
+		s		s
+
+	_mak)	s	(i	s
+	_co)	s	(inus	s
+	_elik)	s	(ir	s
+	_ep)	s	(ilon	s
+	_)	s	(igma	s
+	_)	s	(itcom	s
+
+	_)	s	(ilikon	s
+	_)	s	(ilos	s
+	_)	s	(inus	s
+	_)	s	(inol	s
+	// Keep hard s in the Polish singiel/singel and Singapur families.
+	_)	s	(ingl	s
+	_)	s	(ingiel	s
+	_)	s	(ingel	s
+	_)	s	(ingapur	s
+	_)	s	(ingular	s	// preserve existing out-of-scope pronunciation
+
+		s	(i	S;
+		si	(A	S;
+		sz		S
+
+
+		sch	(ą	sx
+		sch	(ę	sx
+	pa)	sch	(a	sx
+		sch	(ł	sx
+	_)	sch	(ety	sx
+		sch	(odzą	sx
+		sch	(odzę	sx
+		sch	(odzi	sx
+		sch	(ody_	sx
+		sch	(odow	sx
+		sch	(odó	sx
+		sch	(odami_	sx
+		sch	(odach_	sx
+		sch	(odek_	sx
+		sch	(odka	sx
+		sch	(odkowi_	sx
+		sch	(odkiem_	sx
+		sch	(odku_		sx
+		sch	(odki		sx
+		sch	(odkó		sx
+		sch	(odkow		sx
+		sch	(ną	sx
+		sch	(nę	sx
+		sch	(nię	sx
+		sch	(nie_	sx
+		sch	(wytA	sx
+		sch	(wyci	sx
+		sch	(emat	sx
+		sch	(ó	sx
+		sch	(owa	sx
+		sch	(ron_	sx
+		sch	(ronA	sx
+	_w)	sch	(od	sx
+		sch	(owA	sx
+		sch	(rzA	sx
+		sch	(udn	sx
+		sch	(ył	sx
+		sch	(ylA	sx
+	_)	sch	(yl_	sx
+		sch	(rup_	sx
+		sch	(rupanA	sx
+		sch	(rupali	sx
+		sch	(rupać_	sx
+		sch	(rupał	sx
+		sch	(rupiA	sx
+		sch	(rypł	sx
+		sch	(rypl	sx
+		sch	(rypA	sx
+		sch	(orowa	sx
+		sch	(orze	sx
+		sch	(amiA	sx
+		sch	(abowA	sx
+		sch	(abosz	sx
+		sch	(ab_	sx
+		sch	(abA_	sx
+		sch	(abem_	sx
+		sch	(abie_	sx
+		sch	(abó	sx
+		sch	(abami_	sx
+		sch	(abom	sx
+	e)	sch	(ato	sx
+		sch	(adzk	sx
+		sch	(adzA	sx
+		sch	(am_	sx
+		sch	(ami	sx
+		sch	(arakt	sx
+		sch	(edA	sx
+		sch	(ed_	sx
+		sch	(izmA	sx
+		sch	(izm_	sx
+		sch	(izo	sx
+		sch	(ludnA	sx
+		sch	(lać	sx
+		sch	(lanA	sx
+		sch	(lali	sx
+		sch	(leli	sx
+		sch	(lał	sx
+	_)	sch	(leb_	sx
+	_)	sch	(lebi	sx
+	_)	sch	(etyn	sx
+
+
+.group	 ś
+		ś		S;
+		ść	(dzie	Z;
+
+.group	 t
+		t		t
+		t	(i	t;
+		ti	(A	tj
+		t	(rz	t|
+		t	(s	t|
+.group	 u
+		u		u
+		u(_A		u_
+	a)	u		w
+	e)	u		w
+	na)	u	(k	u
+	na)	u	(cz	u
+	_za)	u	(to	w
+	_za)	u		u
+	para)	u		u
+	meta)	u		u
+	Ce)	u	(s	u
+	_nie)	u		u
+	_prze)	u		u
+	Ce)	u	(m_	u
+	@)	u	(łbym_	=u
+	@)	u	(łbyś_	=u
+	@)	u	(łby_	=u
+
+.group	 v
+		v		v
+	f)	v	(A	f
+	h)	v	(A	f
+	k)	v	(A	f
+	p)	v	(A	f
+	s)	v	(A	f
+	t)	v	(A	f
+
+.group	 w
+	kr)	w		f
+	tr)	w		f	// trw- is pronounced with devoiced w: trf...
+		w		v
+		w (sk		_v
+		w	(_	f
+	c)	w	(A	f
+	ć)	w	(A	f
+	cz)	w	(A	f
+
+	_)	w	(_c	f
+	_)	w	(_f	v
+	_)	w	(_h	f
+	_)	w	(_k	f
+	_)	w	(_p	f
+	_)	w	(_s	f
+	_)	w	(_t	f
+
+	_)	w	(_	v
+
+	f)	w	(A	f
+	h)	w	(A	f
+	k)	w	(A	f
+	p)	w	(A	f
+	s)	w	(A	f
+	ś)	w	(A	f
+	sz)	w	(A	f
+	t)	w	(A	f
+	_)	wice	(@P4t	vitsE
+
+.group	 x
+		x		ks
+
+.group	 y
+		y		y
+		y	(_A	y_
+	_pat)	y	(++	y
+
+	r)	y'	(emu_
+	r)	y'	(ego_
+	C)	y'	(emu_	;
+	C)	y'	(ego_	;
+
+	_histor) y (ka++	y
+	_histor) y (kom++	y
+	_tetr)	y	(ka++	y
+	_tetr)	y	(kom++	y
+
+	_et) y (L01_ y
+	_kryt) y (L01_ y
+	_prakt) y (L01_ y
+	_klas) y (L01_ y
+	_mist) y (L01 y
+	_stat) y (L01_ y
+	@aet) y (L01_ y
+	@akt) y (L01_ y
+	@ald) y (L01_ y
+	@alt) y (L01_ y
+	@ant) y (L01_ y
+	@ast) y (L01_ y
+	@aut) y (L01_ y
+	@bat) y (L01_ y
+	@bot) y (L01_ y
+	@cet) y (L01_ y
+	@det) y (L01_ y
+	@eks) y (L01_ y
+	@ekt) y (L01_ y
+	@ent) y (L01_ y
+	@ept) y (L01_ y
+	@est) y (L01_ y
+	@etr) y (L01_ y
+	@eut) y (L01_ y
+	fiz) y (L01_ y
+	@for) y (L01_ y
+	@get) y (L01_ y
+	@gor) y (L01_ y
+	@het) y (L01_ y
+	@iat) y (L01_ y
+	@iot) y (L01_ y
+	@ipt) y (L01_ y
+	@ist) y (L01_ y
+	@ktr) y (L01_ y
+	@las) y (L01_ y
+	@let) y (L01_ y
+	@lit) y (L01_ y
+	@lod) y (L01_ y
+	@mat) y (L01_ y
+	@mer) y (L01_ y
+	@met) y (L01_ y
+	@muz) y (L01_ y
+	@net) y (L01_ y
+	@nez) y (L01_ y
+	@not) y (L01_ y
+	@oet) y (L01_ y
+	opt) y (L01_ y
+	@ord) y (L01_ y
+	@ost) y (L01_ y
+	@ptr) y (L01_ y
+	@rat) y (L01_ y
+	@ret) y (L01_ y
+	@rkt) y (L01_ y
+	@rot) y (L01_ y
+	@ryt) y (L01_ y
+	@tat) y (L01_ y
+	@ter) y (L01_ y
+	@tet) y (L01_ y
+	@tod) y (L01_ y
+	@tor) y (L01_ y
+	@ust) y (L01_ y
+	@yst) y (L01_ y
+	@zot) y (L01_ y
+
+	@ł)	y	(byśmy_	=y
+	@ł)	y	(byście_	=y
+	@ł)	y	(by_	=y
+
+	eb)	y	(śmy_	=y
+	eb)	y	(ście_	=y
+	_ab)	y	(ście_	=y
+	_ab)	y	(śmy_	=y
+	@)	y	(łbym_	=y
+	@)	y	(łbyś_	=y
+	@)	y	(łby_	=y
+
+.group	 z
+		z		z
+
+	// Polish z- + i... families: keep hard z + separate i
+	_)	zi	(śc	z_i	// ziścić and its inflections: WSJP z-iścić
+	_)	zi	(ść	z_i	// ziść, ziśćmy, ziśćcie...
+	_)	zi	(szcz	z_i	// ziszczać, ziszczony, ziszczenie...
+	_)	zi	(dent	z_i	// zidentyfikować, zidentyfikowany, zidentyfikowano...
+	_)	zi	(gnor	z_i
+	_)	zi	(ndeks	z_i
+	_)	zi	(ndoktryn	z_i
+	_)	zi	(ndustrializ	z_i
+	_)	zi	(ndygeniz	z_i
+	_)	zi	(ndywidualiz	z_i
+	_)	zi	(nfantyliz	z_i
+	_)	zi	(nfantyln	z_i
+	_)	zi	(nfiltr	z_i
+	_)	zi	(nformatyz	z_i
+	_)	zi	(nkrust	z_i
+	_)	zi	(nstrument	z_i
+	_)	zi	(nstytucjonaliz	z_i
+	_)	zi	(ntegr	z_i
+	_)	zi	(ntelektualiz	z_i
+	_)	zi	(ntensyfik	z_i
+	_)	zi	(ntensywn	z_i
+	_)	zi	(nterioryz	z_i
+	_)	zi	(nternacjonaliz	z_i
+	_)	zi	(nternaliz	z_i
+	_)	zi	(nterpret	z_i
+	_)	zi	(nwentaryz	z_i
+	_)	zi	(ryt	z_i	// zirytować, zirytowany, zirytował, zirytowanie...
+	_)	zi	(ggurat	z_i	// ziggurat, zigguratu, zigguraty...
+
+	_mue)	z	(in	z
+		z	(_	s
+	_be)	z	(imien	z
+	_be)	z	(interes	z	// bezinteresowny, bezinteresowna, bezinteresowność...
+	de)	z	(i	z	// dez- + i... anywhere in word: dezintegr..., dezinform..., dezinstal...
+		z	(i	Z;
+		zi	(A	Z;
+	_)	zi	(p	Z;i
+		zi	(m+	Z;i
+	_nie)	zi	(C	z_i
+
+	_)	z	(_c	s
+	_)	z	(_f	s
+	_)	z	(_h	s
+	_)	z	(_k	s
+	_)	z	(_p	s
+	_)	z	(_s	s
+	_)	z	(_t	s
+
+	_)	z	(_	z
+
+	_ro)	z	(iC	z
+
+
+.group	 ź
+		ź		Z;
+		ź	(_	S;
+
+.group	 ż
+		ż		Z
+		ż	(_	S
+
+.group	dg
+	_na)	dg		dg
+	_po)	dg		dg
+	_o)	dg		dg
+	prze)	dg		dg
+	_popo)	dg		dg
+	_pona)	dg		dg
+	_poo)	dg		dg
+	_niena)	dg		dg
+	_nieo)	dg		dg
+	_niepo)	dg		dg
+	_niepona)	dg	dg
+	_niepopo)	dg	dg
+	_niepoo)	dg	dg
+.group
+
+		'a	(_S2	a
+		'owi	(_S4	Ovi
+		'em	(_S3	Em
+		'u	(_S2	u
+		'ego	(_S4	EgO
+		'emu	(_S4	Emu
+
+		$		dOlaR
+
+.group а
+		а		a
+.group б
+		б		b
+.group в
+		в		v
+.group г
+		г		g
+.group д
+		д		d
+.group е
+		е		jE
+.group ё
+		ё		jO
+.group ж
+		ж		Z
+.group з
+		з		z
+.group и
+		и		i
+.group й
+		й		j
+.group к
+		к		k
+.group л
+		л		l
+.group м
+		м		m
+.group н
+		н		n
+.group о
+		о		O
+.group п
+		п		p
+.group р
+		р		R
+.group с
+		с		s
+.group т
+		т		t
+.group у
+		у		u
+.group ф
+		ф		f
+.group х
+		х		x
+.group ц
+		ц		ts
+.group ч
+		ч		ts;
+.group ш
+		ш		S
+.group щ
+		щ		S;ts;
+.group ъ
+		ъ		_
+.group ы
+		ы		y
+.group ь
+		ь		j
+.group э
+		э		E
+.group ю
+		ю		ju
+.group я
+		я		ja
+.group є
+		є		jE
+.group і
+		і		i
+.group ї
+		ї		ji
+.group ґ
+		ґ		g
+.group ў
+		ў		w
+.group ђ
+		ђ		dz;
+.group ј
+		ј		j
+.group љ
+		љ		lj
+.group њ
+		њ		n^
+.group ћ
+		ћ		ts;
+.group џ
+		џ		dZ
+.group ѕ
+		ѕ		dz
+.group ß
+		ß		s
+.group ä
+		ä		E
+.group Ä
+		Ä		E
+.group ö
+		ö		E
+.group Ö
+		Ö		E
+.group ü
+		ü		y
+.group Ü
+		Ü		y
+.group ă
+		ă		a
+.group Ă
+		Ă		a
+.group ș
+		ș		S
+.group Ș
+		Ș		S
+.group č
+		č		tS
+.group Č
+		Č		tS
+.group š
+		š		S
+.group Š
+		Š		S
+.group ž
+		ž		Z
+.group Ž
+		Ž		Z
+.group ř
+		ř		Z
+.group Ř
+		Ř		Z
+.group ď
+		ď		dz;
+.group Ď
+		Ď		dz;
+.group ň
+		ň		n^
+.group Ň
+		Ň		n^
+.group ě
+		ě		jE
+.group Ě
+		Ě		jE
+.group ů
+		ů		u
+.group Ů
+		Ů		u
+.group ý
+		ý		y
+.group Ý
+		Ý		y
+.group ő
+		ő		E
+.group Ő
+		Ő		E
+.group ű
+		ű		y
+.group Ű
+		Ű		y
+.group ț
+		ț		ts
+.group Ț
+		Ț		ts
+.group ť
+		ť		ts;
+.group Ť
+		Ť		ts;

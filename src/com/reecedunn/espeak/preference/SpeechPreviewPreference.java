@@ -142,6 +142,21 @@ public final class SpeechPreviewPreference extends Preference {
             int language = tts.setLanguage(Locale.getDefault());
             if (language < TextToSpeech.LANG_AVAILABLE) language = tts.setLanguage(Locale.ENGLISH);
             if (language < TextToSpeech.LANG_AVAILABLE) {
+                final java.util.Set<android.speech.tts.Voice> voices = tts.getVoices();
+                android.speech.tts.Voice fallback = null;
+                if (voices != null) {
+                    for (android.speech.tts.Voice voice : voices) {
+                        if (!voice.isNetworkConnectionRequired()
+                                && (fallback == null || voice.getName().compareTo(fallback.getName()) < 0)) {
+                            fallback = voice;
+                        }
+                    }
+                }
+                if (fallback != null && tts.setVoice(fallback) == TextToSpeech.SUCCESS) {
+                    language = TextToSpeech.LANG_AVAILABLE;
+                }
+            }
+            if (language < TextToSpeech.LANG_AVAILABLE) {
                 fail();
                 return;
             }

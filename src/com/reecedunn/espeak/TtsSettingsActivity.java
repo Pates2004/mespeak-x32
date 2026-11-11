@@ -173,10 +173,17 @@ public class TtsSettingsActivity extends PreferenceActivity {
 
         final ImportVoicePreference pref = new ImportVoicePreference(context);
         pref.setTitle(title);
-        pref.setDialogTitle(title);
         pref.setOnPreferenceChangeListener(mOnPreferenceChanged);
         AppearanceSettings.setOptionalSummary(pref, R.string.import_voice_description);
         return pref;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == ImportVoicePreference.REQUEST_IMPORT_DICTIONARY) {
+            ImportVoicePreference.onDocumentResult(this, resultCode, data);
+        }
     }
 
     private static Preference createVoiceVariantPreference(Context context, VoiceSettings settings, int titleRes) {

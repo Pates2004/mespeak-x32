@@ -85,7 +85,10 @@
   <string name="variant_whisper">Whisper</string>
   <string name="variant_other">Other</string>
   <string name="import_voice_title">Import eSpeak dictionary</string>
-  <string name="import_voice_description">Import an eSpeak voice dictionary file from the SD card.</string>
+  <string name="import_voice_description">Choose an eSpeak _dict file or pl.dict from your documents.</string>
+  <string name="import_voice_working">Importing dictionary…</string>
+  <string name="import_voice_succeeded">Dictionary imported.</string>
+  <string name="import_voice_failed">The dictionary could not be imported. Choose an available, nonempty eSpeak _dict file or pl.dict. Your previous dictionaries are kept.</string>
   <string name="preserve_imported_dictionaries_title">Keep imported dictionaries on update</string>
   <string name="preserve_imported_dictionaries_summary">On by default. When off, the next voice-data update removes imports and uses bundled dictionaries.</string>
 </resources>
