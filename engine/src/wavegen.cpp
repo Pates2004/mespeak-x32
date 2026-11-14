@@ -131,6 +131,8 @@ int outbuf_size = 0;
 intptr_t wcmdq[N_WCMDQ][4];
 int wcmdq_head=0;
 int wcmdq_tail=0;
+static int wavegen_resume=0;
+static int wavegen_echo_complete=0;
 
 // pitch,speed,
 int embedded_default[N_EMBEDDED_VALUES]        = {0,    50,175,100,50, 0, 0, 0,175,0,0,0,0,0,0};
@@ -283,11 +285,20 @@ static void LogMarker(int type, int value)
 
 void WcmdqStop()
 {//=============
-	wcmdq_head = 0;
-	wcmdq_tail = 0;
 #ifdef USE_PORTAUDIO
 	Pa_AbortStream(pa_stream);
 #endif
+	// The synchronous consumer has stopped. Release voice copies it never used.
+	for(int ix=wcmdq_head; ix!=wcmdq_tail; ix=(ix+1)%N_WCMDQ)
+	{
+		if(wcmdq[ix][0] == WCMD_VOICE)
+			free(reinterpret_cast<voice_t *>(wcmdq[ix][1]));
+	}
+	memset(wcmdq,0,sizeof(wcmdq));
+	wcmdq_head = 0;
+	wcmdq_tail = 0;
+	wavegen_resume = 0;
+	wavegen_echo_complete = 0;
 	if(mbrola_name[0] != 0)
 		MbrolaReset();
 }
@@ -1801,8 +1812,8 @@ int WavegenFill(int fill_zeros)
 	intptr_t *q;
 	int length;
 	int result;
-	static int resume=0;
-	static int echo_complete=0;
+	int &resume=wavegen_resume;
+	int &echo_complete=wavegen_echo_complete;
 
 	while(out_ptr < out_end)
 	{

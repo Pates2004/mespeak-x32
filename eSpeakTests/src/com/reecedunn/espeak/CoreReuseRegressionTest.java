@@ -378,6 +378,8 @@ public class CoreReuseRegressionTest {
             fail("Expected callback failure");
         } catch (IllegalStateException expected) {
             assertEquals("Expected output failure", expected.getMessage());
+            assertNotEquals("Failed completion must invalidate voice reuse",
+                    CoreState.revision.get(), CoreState.selectedRevision);
         }
         for (String name : new String[] {"mSynthText", "mCallback"}) {
             Field field = TtsService.class.getDeclaredField(name);

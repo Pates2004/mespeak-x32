@@ -98,6 +98,10 @@ public class SpeechSynthesis {
         return mSampleRate;
     }
 
+    public boolean isReady() {
+        return mInitialized && mSampleRate > 0;
+    }
+
     public int getChannelCount() {
         return CHANNEL_COUNT_MONO;
     }
@@ -283,6 +287,28 @@ public class SpeechSynthesis {
     public final Parameter Punctuation = new Parameter(5, 0, 2, UnitType.Punctuation);
 
     public boolean synthesize(String text, boolean isSsml) {
+        return synthesize(text, isSsml, getCancellationGeneration()) == SYNTHESIS_SUCCESS;
+    }
+
+    public static final int SYNTHESIS_SUCCESS = 0;
+    public static final int SYNTHESIS_CANCELED = 1;
+    public static final int SYNTHESIS_ERROR = 2;
+
+    public static int getCancellationGeneration() {
+        return nativeGetCancellationGeneration();
+    }
+
+    public static boolean isRequestCanceled(int generation) {
+        return nativeGetCancellationGeneration() != generation;
+    }
+
+    public void resetCanceledSynthesis(int generation) {
+        synchronized (CoreState.LOCK) {
+            nativeResetCanceledSynthesis(generation);
+        }
+    }
+
+    public int synthesize(String text, boolean isSsml, int generation) {
         // Native synthesis is synchronous. Complete only after its final status
         // is known, so a failed Sonic flush cannot look like a successful call.
         synchronized (CoreState.LOCK) {
@@ -299,14 +325,23 @@ public class SpeechSynthesis {
                     }
                 }
             }
-            boolean success = false;
+            int result = SYNTHESIS_ERROR;
+            boolean completedSuccessfully = false;
             try {
-                final boolean nativeSuccess = nativeSynthesize(text, isSsml);
-                if (nativeSuccess && mCallback != null) mCallback.onSynthDataComplete();
-                success = nativeSuccess;
-                return success;
+                result = nativeSynthesize(text, isSsml, generation);
+                if (result == SYNTHESIS_SUCCESS && !isRequestCanceled(generation) && mCallback != null) {
+                    mCallback.onSynthDataComplete();
+                }
+                if (isRequestCanceled(generation)) {
+                    nativeResetCanceledSynthesis(generation);
+                    return SYNTHESIS_CANCELED;
+                }
+                completedSuccessfully = result == SYNTHESIS_SUCCESS;
+                return result;
             } finally {
-                if (!reusable || !success) CoreState.invalidateVoice();
+                if (!reusable || !completedSuccessfully || isRequestCanceled(generation)) {
+                    CoreState.invalidateVoice();
+                }
             }
         }
     }
@@ -430,7 +465,9 @@ public class SpeechSynthesis {
 
     private native final boolean nativeSetPunctuationCharacters(String characters);
 
-    private native final boolean nativeSynthesize(String text, boolean isSsml);
+    private native final int nativeSynthesize(String text, boolean isSsml, int generation);
+    private static native int nativeGetCancellationGeneration();
+    private native void nativeResetCanceledSynthesis(int generation);
 
     private native final boolean nativeSetSonicRate(int rate);
 

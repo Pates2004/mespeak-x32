@@ -102,6 +102,22 @@ enum synthesis_result {
   SYNTH_ABORT = 1
 };
 
+/* Keep these request results in sync with SpeechSynthesis.java. */
+enum request_result {
+  REQUEST_SUCCESS = 0,
+  REQUEST_CANCELED = 1,
+  REQUEST_ERROR = 2
+};
+
+enum delivery_result {
+  DELIVERY_ERROR = 0,
+  DELIVERY_OK = 1,
+  DELIVERY_CANCELED = -1
+};
+
+/* Called only by the synthesis thread while Java owns CoreState.LOCK. */
+extern void AndroidResetCanceledSynthesis(void);
+
 static JavaVM *jvm = NULL;
 jmethodID METHOD_nativeSynthCallback;
 jmethodID METHOD_nativeSynthWordCallback;
@@ -118,13 +134,16 @@ static sonicStream sonic_stream = NULL;
 static int sonic_sample_rate = 22050;
 static atomic_int sonic_failed;
 
-/* Set by nativeStop from the framework's control thread while espeak_Synth is
- * still running on the synthesis thread.  espeak_ng_Cancel() cannot interrupt a
- * synthesis in progress -- its body is entirely #if USE_ASYNC, which this build
- * disables -- so returning SYNTH_ABORT from the callback is the only way to end
- * one early.  Without it a stop has to wait for the whole utterance to be
- * synthesized, which is silence for as long as the text the user just left. */
-static atomic_int stop_requested;
+/* The control thread changes only this atomic generation. A request captures
+ * it before callback.start/configuration and passes that value to native entry.
+ * Entry must never reset a stop that arrived while configuration was running.
+ * active_generation is owned exclusively by the serialized synthesis thread. */
+static atomic_uint cancellation_generation;
+static unsigned int active_generation;
+
+static int request_canceled(void) {
+  return atomic_load(&cancellation_generation) != active_generation;
+}
 
 static JNIEnv *getJniEnv() {
   JNIEnv *env = NULL;
@@ -140,32 +159,47 @@ static void sonic_destroy_stream(void) {
 }
 
 static int deliver_audio(JNIEnv *env, jobject object, short *samples, int count) {
-  if (count <= 0) return 1;
+  if (request_canceled()) return DELIVERY_CANCELED;
+  if (count <= 0) return DELIVERY_OK;
   jbyteArray arrayAudioData = (*env)->NewByteArray(env, count * 2);
-  if (arrayAudioData == NULL) return 0;
+  if (arrayAudioData == NULL) return DELIVERY_ERROR;
   (*env)->SetByteArrayRegion(env, arrayAudioData, 0, count * 2,
                              (jbyte *) samples);
+  if ((*env)->ExceptionCheck(env) || request_canceled()) {
+    (*env)->DeleteLocalRef(env, arrayAudioData);
+    return request_canceled() ? DELIVERY_CANCELED : DELIVERY_ERROR;
+  }
   (*env)->CallVoidMethod(env, object, METHOD_nativeSynthCallback, arrayAudioData);
   (*env)->DeleteLocalRef(env, arrayAudioData);
+  if (request_canceled()) return DELIVERY_CANCELED;
+  if ((*env)->ExceptionCheck(env)) return DELIVERY_ERROR;
   frames_delivered += count;
-  return 1;
+  return DELIVERY_OK;
 }
 
 static int deliver_sonic_output(JNIEnv *env, jobject object, int flush) {
-  if (sonic_stream == NULL) return 1;
-  if (flush && !sonicFlushStream(sonic_stream)) return 0;
+  if (request_canceled()) return DELIVERY_CANCELED;
+  if (sonic_stream == NULL) return DELIVERY_OK;
+  if (flush) {
+    const int flushed = sonicFlushStream(sonic_stream);
+    if (request_canceled()) return DELIVERY_CANCELED;
+    if (!flushed) return DELIVERY_ERROR;
+  }
 
   short output[8192];
   while (sonicSamplesAvailable(sonic_stream) > 0) {
+    if (request_canceled()) return DELIVERY_CANCELED;
     int available = sonicSamplesAvailable(sonic_stream);
     int count = available > (int)(sizeof(output) / sizeof(output[0]))
                     ? (int)(sizeof(output) / sizeof(output[0]))
                     : available;
     int read = sonicReadShortFromStream(sonic_stream, output, count);
+    if (request_canceled()) return DELIVERY_CANCELED;
     if (read <= 0) break;
-    if (!deliver_audio(env, object, output, read)) return 0;
+    const int delivered = deliver_audio(env, object, output, read);
+    if (delivered != DELIVERY_OK) return delivered;
   }
-  return 1;
+  return request_canceled() ? DELIVERY_CANCELED : DELIVERY_OK;
 }
 
 /* Callback from espeak.  Should call back to the TTS API */
@@ -176,10 +210,10 @@ static int SynthCallback(short *audioData, int numSamples,
 
   /* espeak marks the end of the request with a NULL buffer, not with a zero
    * sample count -- an empty buffer can legitimately occur mid-stream. */
-  if (audioData == NULL || atomic_load(&stop_requested)) {
-    if (audioData == NULL && !atomic_load(&stop_requested)
+  if (audioData == NULL || request_canceled()) {
+    if (audioData == NULL && !request_canceled()
         && sonic_speed > 1.0f && !atomic_load(&sonic_failed)) {
-      if (!deliver_sonic_output(env, object, 1)) {
+      if (deliver_sonic_output(env, object, 1) == DELIVERY_ERROR) {
         atomic_store(&sonic_failed, 1);
       }
     }
@@ -190,6 +224,10 @@ static int SynthCallback(short *audioData, int numSamples,
 
   for (espeak_EVENT *event = events;
        event->type != espeakEVENT_LIST_TERMINATED; ++event) {
+    if (request_canceled()) {
+      sonic_destroy_stream();
+      return SYNTH_ABORT;
+    }
     if (event->type != espeakEVENT_WORD)
       continue;
 
@@ -210,6 +248,11 @@ static int SynthCallback(short *audioData, int numSamples,
     (*env)->CallVoidMethod(env, object, METHOD_nativeSynthWordCallback,
                            (jint) event->text_position, (jint) event->length,
                            (jint) marker);
+    if (request_canceled() || (*env)->ExceptionCheck(env)) {
+      if ((*env)->ExceptionCheck(env)) atomic_store(&sonic_failed, 1);
+      sonic_destroy_stream();
+      return SYNTH_ABORT;
+    }
   }
 
   if (numSamples > 0) {
@@ -223,8 +266,18 @@ static int SynthCallback(short *audioData, int numSamples,
         }
       }
       if (!atomic_load(&sonic_failed)) {
-        if (!sonicWriteShortToStream(sonic_stream, audioData, numSamples)
-            || !deliver_sonic_output(env, object, 0)) {
+        if (request_canceled()) {
+          sonic_destroy_stream();
+          return SYNTH_ABORT;
+        }
+        const int written = sonicWriteShortToStream(sonic_stream, audioData, numSamples);
+        const int delivered = request_canceled() ? DELIVERY_CANCELED
+            : written ? deliver_sonic_output(env, object, 0) : DELIVERY_ERROR;
+        if (delivered == DELIVERY_CANCELED) {
+          sonic_destroy_stream();
+          return SYNTH_ABORT;
+        }
+        if (delivered == DELIVERY_ERROR) {
           atomic_store(&sonic_failed, 1);
           sonic_destroy_stream();
         }
@@ -235,14 +288,19 @@ static int SynthCallback(short *audioData, int numSamples,
       return SYNTH_ABORT;
     }
     if (sonic_speed <= 1.0f) {
-      if (!deliver_audio(env, object, audioData, numSamples)) {
-        atomic_store(&sonic_failed, 1);
-        atomic_store(&stop_requested, 1);
+      const int delivered = deliver_audio(env, object, audioData, numSamples);
+      if (delivered != DELIVERY_OK) {
+        if (delivered == DELIVERY_ERROR) atomic_store(&sonic_failed, 1);
+        sonic_destroy_stream();
         return SYNTH_ABORT;
       }
     }
   }
 
+  if (request_canceled()) {
+    sonic_destroy_stream();
+    return SYNTH_ABORT;
+  }
   return SYNTH_CONTINUE;
 }
 
@@ -447,19 +505,46 @@ JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSetPunctuationCharacters
   return JNI_FALSE;
 }
 
-JNIEXPORT jboolean
-JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSynthesize(
-    JNIEnv *env, jobject object, jstring text, jboolean isSsml) {
-  if (DEBUG) LOGV("%s", __FUNCTION__);
-  const char *c_text = text ? (*env)->GetStringUTFChars(env, text, NULL) : NULL;
-  if (c_text == NULL) return JNI_FALSE;
-  unsigned int unique_identifier;
+JNIEXPORT jint
+JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeGetCancellationGeneration(
+    JNIEnv *env, jclass clazz) {
+  return (jint) atomic_load(&cancellation_generation);
+}
 
-  espeak_SetSynthCallback(SynthCallback);
+JNIEXPORT void
+JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeResetCanceledSynthesis(
+    JNIEnv *env, jobject object, jint generation) {
+  if (atomic_load(&cancellation_generation) != (unsigned int) generation) {
+    sonic_destroy_stream();
+    AndroidResetCanceledSynthesis();
+  }
+}
+
+JNIEXPORT jint
+JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSynthesize(
+    JNIEnv *env, jobject object, jstring text, jboolean isSsml, jint generation) {
+  if (DEBUG) LOGV("%s", __FUNCTION__);
+  active_generation = (unsigned int) generation;
   frames_delivered = 0;
   sonic_destroy_stream();
   atomic_store(&sonic_failed, 0);
-  atomic_store(&stop_requested, 0);
+  if (request_canceled()) {
+    AndroidResetCanceledSynthesis();
+    return REQUEST_CANCELED;
+  }
+  const char *c_text = text ? (*env)->GetStringUTFChars(env, text, NULL) : NULL;
+  if (c_text == NULL) {
+    AndroidResetCanceledSynthesis();
+    return request_canceled() ? REQUEST_CANCELED : REQUEST_ERROR;
+  }
+  unsigned int unique_identifier;
+
+  espeak_SetSynthCallback(SynthCallback);
+  if (request_canceled()) {
+    (*env)->ReleaseStringUTFChars(env, text, c_text);
+    AndroidResetCanceledSynthesis();
+    return REQUEST_CANCELED;
+  }
   const espeak_ERROR result = espeak_Synth(c_text, strlen(c_text), 0,  // position
                POS_CHARACTER, 0, // end position (0 means no end position)
                isSsml ? espeakCHARS_UTF8 | espeakSSML // UTF-8 encoded SSML
@@ -469,14 +554,23 @@ JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSynthesize(
 
   if (c_text) (*env)->ReleaseStringUTFChars(env, text, c_text);
 
+  sonic_destroy_stream();
+  if (request_canceled()) {
+    AndroidResetCanceledSynthesis();
+    return REQUEST_CANCELED;
+  }
+  if (result != EE_OK || atomic_load(&sonic_failed)) {
+    AndroidResetCanceledSynthesis();
+  }
+
   switch (result) {
-    case EE_OK:             return atomic_load(&sonic_failed) ? JNI_FALSE : JNI_TRUE;
+    case EE_OK:             return atomic_load(&sonic_failed) ? REQUEST_ERROR : REQUEST_SUCCESS;
     case EE_INTERNAL_ERROR: LOGE("espeak_Synth: internal error."); break;
     case EE_BUFFER_FULL:    LOGE("espeak_Synth: buffer full."); break;
     case EE_NOT_FOUND:      LOGE("espeak_Synth: not found."); break;
   }
 
-  return JNI_FALSE;
+  return REQUEST_ERROR;
 }
 
 JNIEXPORT jboolean
@@ -509,8 +603,7 @@ JNIEXPORT jboolean
 JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeStop(
     JNIEnv *env, jobject object) {
   if (DEBUG) LOGV("%s", __FUNCTION__);
-  atomic_store(&stop_requested, 1);
-  espeak_Cancel();
+  atomic_fetch_add(&cancellation_generation, 1);
 
   return JNI_TRUE;
 }

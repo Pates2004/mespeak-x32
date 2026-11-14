@@ -6,6 +6,13 @@
 #include "synthesize.h"
 #include "voice.h"
 
+// The framework's control thread must not write core state. Perform any
+// canceled-request cleanup here on the serialized synthesis thread instead.
+extern "C" void AndroidResetCanceledSynthesis(void)
+{
+    SpeakNextClause(NULL, NULL, 2);
+}
+
 // Reuse the loaded translator/dictionary, but retain the normal voice-selection
 // command that restores Wavegen's working timbre, echo and formant state.
 extern "C" JNIEXPORT jboolean JNICALL

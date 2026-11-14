@@ -61,8 +61,20 @@ public class TtsService extends TextToSpeechService {
     private static Context storageContext;
     private static final boolean DEBUG = BuildConfig.DEBUG;
 
-    private SpeechSynthesis mEngine;
+    private volatile SpeechSynthesis mEngine;
     private SynthesisCallback mCallback;
+    private volatile ActiveRequest mActiveRequest;
+
+    private static final class ActiveRequest {
+        final int generation = SpeechSynthesis.getCancellationGeneration();
+        volatile boolean canceled;
+        boolean nativeStarted;
+        boolean outputFailed;
+    }
+
+    private static boolean isCanceled(ActiveRequest request) {
+        return request.canceled || SpeechSynthesis.isRequestCanceled(request.generation);
+    }
 
     /** Text handed to eSpeak for the current request. */
     private String mSynthText;
@@ -110,20 +122,32 @@ public class TtsService extends TextToSpeechService {
     /**
      * Sets up the native eSpeak engine.
      */
-    private void initializeTtsEngine() {
-        if (mEngine != null) {
-            mEngine.stop();
-            mEngine = null;
-        }
+    protected SpeechSynthesis createSpeechSynthesis(Context context, SynthReadyCallback callback) {
+        return new SpeechSynthesis(context, callback);
+    }
 
-        mEngine = new SpeechSynthesis(storageContext, mSynthCallback);
-        mMatchingVoice = null;
-        List<Voice> voices = mEngine.getAvailableVoices();
+    private synchronized boolean initializeTtsEngine() {
+        final SpeechSynthesis candidate = createSpeechSynthesis(storageContext, mSynthCallback);
+        List<Voice> voices = candidate.isReady() ? candidate.getAvailableVoices() : new ArrayList<Voice>();
         synchronized (mAvailableVoices) {
+            mMatchingVoice = null;
             mAllVoices = new ArrayList<Voice>(voices);
             if (DEBUG) Log.i(TAG, "initializeTtsEngine(): loaded voices=" + mAllVoices.size());
         }
         rebuildAvailableVoices();
+        // Publish readiness only after its corresponding catalog is complete.
+        mEngine = candidate;
+        return candidate.isReady();
+    }
+
+    private boolean ensureEngineReady() {
+        final SpeechSynthesis current = mEngine;
+        if (current != null && current.isReady()) return true;
+        synchronized (this) {
+            if (mEngine != null && mEngine.isReady()) return true;
+            if (!CheckVoiceData.ensureVoiceData(storageContext)) return false;
+            return initializeTtsEngine();
+        }
     }
 
     @Override
@@ -144,6 +168,7 @@ public class TtsService extends TextToSpeechService {
     }
 
     private Pair<Voice, Integer> findVoice(String language, String country, String variant) {
+        if (!ensureEngineReady()) return new Pair<>(null, TextToSpeech.LANG_MISSING_DATA);
         if (!CheckVoiceData.hasBaseResources(storageContext)) {
             return new Pair<>(null, TextToSpeech.LANG_MISSING_DATA);
         }
@@ -241,6 +266,7 @@ public class TtsService extends TextToSpeechService {
 
     @Override
     public List<android.speech.tts.Voice> onGetVoices() {
+        ensureEngineReady();
         rebuildAvailableVoices();
         List<android.speech.tts.Voice> voices = new ArrayList<android.speech.tts.Voice>();
         synchronized (mAvailableVoices) {
@@ -257,6 +283,7 @@ public class TtsService extends TextToSpeechService {
 
     @Override
     public int onIsValidVoiceName(String name) {
+        if (!ensureEngineReady()) return TextToSpeech.ERROR;
         synchronized (mAvailableVoices) {
             Voice voice = mAvailableVoices.get(name);
             return (voice == null) ? TextToSpeech.ERROR : TextToSpeech.SUCCESS;
@@ -265,6 +292,7 @@ public class TtsService extends TextToSpeechService {
 
     @Override
     public int onLoadVoice(String name) {
+        if (!ensureEngineReady()) return TextToSpeech.ERROR;
         synchronized (mAvailableVoices) {
             Voice voice = mAvailableVoices.get(name);
             if (voice == null) {
@@ -279,7 +307,10 @@ public class TtsService extends TextToSpeechService {
     protected void onStop() {
         if (DEBUG) Log.i(TAG, "Received stop request.");
 
-        mEngine.stop();
+        final ActiveRequest active = mActiveRequest;
+        if (active != null) active.canceled = true;
+        final SpeechSynthesis engine = mEngine;
+        if (engine != null) engine.stop();
     }
 
     static String getRequestString(SynthesisRequest request) {
@@ -339,6 +370,9 @@ public class TtsService extends TextToSpeechService {
      * utterance, which hides failures from screen readers.
      */
     private void reportError(SynthesisCallback callback, int errorCode) {
+        final ActiveRequest active = mActiveRequest;
+        if (active != null && (active.canceled
+                || (!active.outputFailed && SpeechSynthesis.isRequestCanceled(active.generation)))) return;
         // error(int) has been available since API 21, which is minSdk here, so
         // the code always reaches the caller.
         callback.error(errorCode);
@@ -371,6 +405,20 @@ public class TtsService extends TextToSpeechService {
 
     @Override
     protected synchronized void onSynthesizeText(SynthesisRequest request, SynthesisCallback callback) {
+        final ActiveRequest active = new ActiveRequest();
+        mActiveRequest = active;
+        try {
+            if (!ensureEngineReady()) {
+                if (!isCanceled(active)) reportError(callback, TextToSpeech.ERROR_NOT_INSTALLED_YET);
+                return;
+            }
+            if (!isCanceled(active)) synthesizeRequest(request, callback, active);
+        } finally {
+            mActiveRequest = null;
+        }
+    }
+
+    private void synthesizeRequest(SynthesisRequest request, SynthesisCallback callback, ActiveRequest active) {
         if (selectVoice(request) == TextToSpeech.ERROR) {
             reportError(callback, CheckVoiceData.hasBaseResources(storageContext)
                     ? TextToSpeech.ERROR_SERVICE : TextToSpeech.ERROR_NOT_INSTALLED_YET);
@@ -425,12 +473,16 @@ public class TtsService extends TextToSpeechService {
         }
 
         synchronized (CoreState.LOCK) {
-            synthesizeSelectedVoice(request, callback, voice, text, textOffset);
+            try {
+                if (!isCanceled(active)) synthesizeSelectedVoice(request, callback, voice, text, textOffset, active);
+            } finally {
+                if (!active.nativeStarted && isCanceled(active)) mEngine.resetCanceledSynthesis(active.generation);
+            }
         }
     }
 
     private void synthesizeSelectedVoice(SynthesisRequest request, SynthesisCallback callback,
-            Voice voice, String text, int textOffset) {
+            Voice voice, String text, int textOffset, ActiveRequest active) {
         if (callback.start(mEngine.getSampleRate(), mEngine.getAudioFormat(),
                 mEngine.getChannelCount()) != TextToSpeech.SUCCESS) {
             // The framework has rejected/canceled this request. Do not load a
@@ -445,7 +497,7 @@ public class TtsService extends TextToSpeechService {
 
         mCallback = callback;
         try {
-            configureAndSynthesize(request, callback, voice, text);
+            if (!isCanceled(active)) configureAndSynthesize(request, callback, voice, text, active);
         } finally {
             mCallback = null;
             mSynthText = null;
@@ -457,12 +509,14 @@ public class TtsService extends TextToSpeechService {
     }
 
     private void configureAndSynthesize(SynthesisRequest request, SynthesisCallback callback,
-            Voice voice, String text) {
+            Voice voice, String text, ActiveRequest active) {
         final VoiceSettings settings = new VoiceSettings(PreferenceManager.getDefaultSharedPreferences(storageContext), mEngine);
+        if (isCanceled(active)) return;
         if (!mEngine.setVoice(voice, settings.getVoiceVariant())) {
-            reportError(callback, TextToSpeech.ERROR_SYNTHESIS);
+            if (!isCanceled(active)) reportError(callback, TextToSpeech.ERROR_SYNTHESIS);
             return;
         }
+        if (isCanceled(active)) return;
 
         final int rate = settings.getRateForCaller(request.getSpeechRate());
         final int normalMaximum = mEngine.Rate.getMaxValue();
@@ -478,7 +532,12 @@ public class TtsService extends TextToSpeechService {
         mEngine.Volume.setValue(settings.getVolume());
         mEngine.Punctuation.setValue(settings.getPunctuationLevel());
         mEngine.setPunctuationCharacters(settings.getPunctuationCharacters());
-        if (!mEngine.synthesize(text, text.startsWith("<speak"))) {
+        if (isCanceled(active)) return;
+        active.nativeStarted = true;
+        final int result = mEngine.synthesize(text, text.startsWith("<speak"), active.generation);
+        if (active.outputFailed && !active.canceled) {
+            reportError(callback, TextToSpeech.ERROR_OUTPUT);
+        } else if (result == SpeechSynthesis.SYNTHESIS_ERROR && !isCanceled(active)) {
             reportError(callback, TextToSpeech.ERROR_SYNTHESIS);
         }
     }
@@ -510,6 +569,8 @@ public class TtsService extends TextToSpeechService {
     private final SpeechSynthesis.SynthReadyCallback mSynthCallback = new SynthReadyCallback() {
         @Override
         public void onSynthDataReady(byte[] audioData) {
+            final ActiveRequest active = mActiveRequest;
+            if (active == null || isCanceled(active) || mCallback == null) return;
             if ((audioData == null) || (audioData.length == 0)) {
                 onSynthDataComplete();
                 return;
@@ -519,22 +580,24 @@ public class TtsService extends TextToSpeechService {
             if (maxBytesToCopy <= 0) {
                 // Reject a broken output buffer instead of looping with zero
                 // progress. This path must also invalidate the reusable voice.
+                active.outputFailed = true;
                 mEngine.stop();
-                mCallback.error(TextToSpeech.ERROR_OUTPUT);
                 return;
             }
 
             int offset = 0;
 
             while (offset < audioData.length) {
+                if (isCanceled(active)) return;
                 final int bytesToWrite = Math.min(maxBytesToCopy, (audioData.length - offset));
-                if (mCallback.audioAvailable(audioData, offset, bytesToWrite)
-                        != TextToSpeech.SUCCESS) {
+                final int result = mCallback.audioAvailable(audioData, offset, bytesToWrite);
+                if (result != TextToSpeech.SUCCESS) {
                     // The framework has stopped accepting audio for this
                     // request, so the rest of the buffer has nowhere to go.
                     // A stop normally reaches the engine through onStop();
                     // stopping here as well covers a failure that arrives
                     // without one.
+                    if (result != TextToSpeech.STOPPED && !isCanceled(active)) active.outputFailed = true;
                     mEngine.stop();
                     return;
                 }
@@ -544,11 +607,14 @@ public class TtsService extends TextToSpeechService {
 
         @Override
         public void onSynthDataComplete() {
-            mCallback.done();
+            final ActiveRequest active = mActiveRequest;
+            if (active != null && !active.outputFailed && !isCanceled(active) && mCallback != null) mCallback.done();
         }
 
         @Override
         public void onSynthWordBoundary(int textPosition, int textLength, int markerInFrames) {
+            final ActiveRequest active = mActiveRequest;
+            if (active == null || isCanceled(active) || mCallback == null) return;
             // rangeStart() is API 26; below that the framework has no way to
             // deliver word boundaries to the caller.
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || mSynthText == null) {
