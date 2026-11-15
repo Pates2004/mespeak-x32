@@ -43,7 +43,7 @@ in `muzyka` and `minimum`, and uses the Polish affricate in numeric 30/40/200.
 20 and 300 are unchanged. The tracked [mydict](mydict/README.md) alternative uses
 the documented colloquial stress style and the older numeric pronunciation;
 both dictionaries contain the current unrelated pronunciation fixes. Import
-`mydict/pl.dict` to use that alternative. To restore this release's default,
+`mydict/pl_dict` to use that alternative. To restore this release's default,
 download `engine/espeak-data/pl_dict` from the same release tag and import it.
 Existing explicit imports continue to override bundled dictionaries when preserved.
 There is one APK and one native engine; no background service or synthesis-rate

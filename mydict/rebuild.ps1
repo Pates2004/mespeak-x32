@@ -131,7 +131,7 @@ if (Test-Path -LiteralPath $canonicalSource) {
     }
 }
 
-$legacyBinary = Join-Path $PSScriptRoot 'pl.dict'
+$legacyBinary = Join-Path $PSScriptRoot 'pl_dict'
 if ($VerifiedAlternativeDictionary) {
     $legacyBinary = (Resolve-Path -LiteralPath $VerifiedAlternativeDictionary).Path
 }

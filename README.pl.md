@@ -50,7 +50,7 @@ Domyślny słownik poprawia akcent rodziny Monika, używa starannego akcentu
 w „muzyka” i „minimum” oraz polskiej afrykaty w liczbach 30/40/200. Liczby 20 i 300
 są bez zmian. Alternatywny [mydict](mydict/README.pl.md) zawiera udokumentowany
 potoczny styl akcentowania i starszą wymowę liczb. Oba słowniki mają te same
-bieżące pozostałe poprawki. Aby włączyć alternatywę, zaimportuj `mydict/pl.dict`.
+bieżące pozostałe poprawki. Aby włączyć alternatywę, zaimportuj `mydict/pl_dict`.
 Aby wrócić do wersji domyślnej, pobierz `engine/espeak-data/pl_dict` z tego samego
 tagu wydania i zaimportuj go. Zachowany świadomy import nadal ma pierwszeństwo
 przed słownikiem dołączonym do aplikacji. To nadal jeden APK i jeden silnik;

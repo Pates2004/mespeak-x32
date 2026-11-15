@@ -2,7 +2,7 @@
 
 [Polska instrukcja](README.pl.md)
 
-`pl.dict` is a **complete** alternative dictionary, not an overlay. It retains
+`pl_dict` is a **complete** alternative dictionary, not an overlay. It retains
 the current pronunciation fixes, with these approved differences:
 
 - Numeric 30/40/200 and their compounds retain the earlier `c;` sound instead
@@ -30,20 +30,26 @@ forms receive the selected style in either meaning.
 
 Installers use the default. The native runtime filename is **`pl_dict`**,
 without an extension. On Windows, close applications using the engine, retain
-your existing dictionary outside `espeak-data`, and copy `pl.dict` into the
-installed `espeak-data` under the name `pl_dict`. Administrator permission may
+your existing dictionary outside `espeak-data`, and copy this folder's `pl_dict`
+into the installed `espeak-data` without renaming it. Administrator permission may
 be required. Restore the default with the same release's `espeak-data/pl_dict`.
 An installer upgrade may restore the default; copy the matching alternative
 again if desired. Do not replace phoneme tables or use another eSpeak NG
 release's dictionary.
 
-On Android, select `pl.dict` in dictionary import; the app stores it as
-`pl_dict`. Restore the default by importing `engine/espeak-data/pl_dict` from
+On Android, select this folder's `pl_dict` in dictionary import.
+Restore the default by importing `engine/espeak-data/pl_dict` from
 the **exact same version/tag** of this repository. This replaces only that
 dictionary, preserving other imports/settings; clearing app data is unnecessary.
 Android may preserve an imported dictionary across app updates. To receive
-later fixes, import `mydict/pl.dict` from the **new matching release/tag** after
+later fixes, import `mydict/pl_dict` from the **new matching release/tag** after
 updating the app.
+
+The filename cleanup does not change the dictionary bytes or require a new
+installer. Current branches provide the ready-to-use `mydict/pl_dict`.
+Historical Windows r40 / Android r44 and earlier tags still use `mydict/pl.dict`;
+when using those archived files directly, rename them to `pl_dict`.
+Android continues to accept the old `pl.dict` import alias as well.
 
 `dictsource/pl_list` and `dictsource/pl_rules` are the full Polish sources;
 there is no `pl_roots`, `pl_listx` or `pl_extra` dependency. The host compiler
@@ -59,8 +65,8 @@ From PowerShell inside `mydict`:
 .\rebuild.ps1 -VerifyOnly
 ```
 
-The first command compiles both variants, updating this folder's `pl.dict` and
-the checkout's default. Without `-InstallDefault`, only `pl.dict` is updated.
+The first command compiles both variants, updating this folder's `pl_dict` and
+the checkout's default. Without `-InstallDefault`, only `pl_dict` is updated.
 `-CheckOnly` rebuilds and compares both without changing product dictionaries.
 `-DataPath` selects the **parent of espeak-data** for compilation input;
 otherwise the checkout root (Windows) or `engine` (Android) is used.
@@ -71,7 +77,7 @@ evidence in central Workspace, and does not modify host installation data.
 `-VerifyOnly` needs no compiler. Packaging uses it to verify both binaries,
 sources and the approved mapping against `dictionary-manifest.json`. Source
 and `voices/pl` text hashes normalize UTF-8/LF, tolerating Git CRLF conversion;
-binary table hashes and runtime files stay unchanged. Git marks `pl.dict`
+binary table hashes and runtime files stay unchanged. Git marks `pl_dict`
 binary. Update sources and manifest together after a reviewed rebuild.
 Dictionary sources must be valid UTF-8 without a BOM. The classic compiler
 can interpret a leading BOM as an extra dictionary word; verification rejects

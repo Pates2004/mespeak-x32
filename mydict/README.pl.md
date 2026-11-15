@@ -2,7 +2,7 @@
 
 [English instructions](README.md)
 
-`pl.dict` to **kompletny** wariant słownika, a nie nakładka. Zachowuje bieżące
+`pl_dict` to **kompletny** wariant słownika, a nie nakładka. Zachowuje bieżące
 poprawki wymowy, z następującymi uzgodnionymi różnicami:
 
 - Liczbowe 30/40/200 i ich złożenia zachowują wcześniejsze `c;` zamiast
@@ -33,20 +33,26 @@ wspólny zapis otrzyma wybrany styl niezależnie od znaczenia.
 Instalatory używają wersji domyślnej. Rzeczywista nazwa pliku silnika to
 **`pl_dict`**, bez rozszerzenia. Na Windows zamknij aplikacje korzystające
 z syntezatora, zachowaj dotychczasowy słownik poza `espeak-data` i skopiuj
-`pl.dict` do zainstalowanego `espeak-data` pod nazwą `pl_dict`. Mogą być
+plik `pl_dict` z tego folderu do zainstalowanego `espeak-data`, bez zmiany nazwy. Mogą być
 potrzebne uprawnienia administratora. Domyślny słownik przywrócisz przez
 `espeak-data/pl_dict` z tego samego wydania. Aktualizacja instalatorem może
 przywrócić wersję domyślną; podmień ponownie pasujący wariant opcjonalny,
 jeśli go chcesz. Nie wymieniaj tablic fonemów i nie używaj słownika z obcego
 wydania eSpeak NG.
 
-Na Androidzie wybierz `pl.dict` w imporcie; aplikacja zapisze go jako
-`pl_dict`. Wersję domyślną przywrócisz, importując `engine/espeak-data/pl_dict`
+Na Androidzie wybierz plik `pl_dict` z tego folderu w imporcie.
+Wersję domyślną przywrócisz, importując `engine/espeak-data/pl_dict`
 dokładnie z **tej samej wersji/tagu** repozytorium. Zastąpi to tylko ten słownik,
 zachowując pozostałe importy i ustawienia; nie trzeba czyścić danych aplikacji.
 Android może zachować import podczas aktualizacji. Aby otrzymać kolejne
-poprawki, po aktualizacji aplikacji zaimportuj `mydict/pl.dict` z **nowego,
+poprawki, po aktualizacji aplikacji zaimportuj `mydict/pl_dict` z **nowego,
 pasującego wydania/tagu**.
+
+Ujednolicenie nazwy nie zmienia zawartości słownika i nie wymaga nowego
+instalatora. Bieżące gałęzie udostępniają gotowy do użycia `mydict/pl_dict`.
+Historyczne tagi Windows r40 / Android r44 i starsze nadal mają `mydict/pl.dict`;
+przy bezpośrednim użyciu tych archiwalnych plików zmień nazwę na `pl_dict`.
+Android nadal przyjmuje także dawny alias importu `pl.dict`.
 
 `dictsource/pl_list` i `dictsource/pl_rules` to pełne polskie źródła;
 nie ma zależności `pl_roots`, `pl_listx` ani `pl_extra`. Kompilator i tablice
@@ -63,9 +69,9 @@ W PowerShell, w folderze `mydict`:
 .\rebuild.ps1 -VerifyOnly
 ```
 
-Pierwsze polecenie kompiluje oba warianty, aktualizując `pl.dict` i wersję
+Pierwsze polecenie kompiluje oba warianty, aktualizując `pl_dict` i wersję
 domyślną repozytorium. Bez `-InstallDefault` aktualizowany jest tylko
-`pl.dict`. `-CheckOnly` odbudowuje i porównuje oba pliki bez zmiany słowników
+`pl_dict`. `-CheckOnly` odbudowuje i porównuje oba pliki bez zmiany słowników
 produktu. `-DataPath` wskazuje **katalog nadrzędny espeak-data** jako dane
 wejściowe; domyślnie jest to główny katalog Windows albo `engine` Androida.
 Domyślny słownik jest zapisywany zawsze w tym repozytorium, również przy
@@ -77,7 +83,7 @@ danych syntezatora zainstalowanego w systemie.
 źródła i zatwierdzoną mapę względem `dictionary-manifest.json`. Hashe tekstów
 źródeł i `voices/pl` są normalizowane do UTF-8/LF, więc konwersja CRLF przez
 Git nie przeszkadza; hashe tablic binarnych i pliki danych nie są zmieniane.
-Git traktuje `pl.dict` jako binarny. Po zatwierdzonej odbudowie aktualizuj
+Git traktuje `pl_dict` jako binarny. Po zatwierdzonej odbudowie aktualizuj
 źródła i manifest razem.
 Źródła muszą być poprawnym UTF-8 bez BOM. Klasyczny kompilator może uznać
 początkowy BOM za dodatkowe słowo; weryfikator jawnie go odrzuca. Obsługiwane
