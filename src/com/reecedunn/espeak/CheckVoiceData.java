@@ -80,6 +80,7 @@ public class CheckVoiceData extends Activity {
         "027d2ff8e4fda073ce548b1658a44b2ebac03bb3",
         "501e07b3e011d3b68ed1d89c85edae9f5667d8d5",
         "3ec56cf1c39debd6624d4070a22ae4f0139500d0",
+        "8d65986d9f34972fc54f354c0580f4c9ba018697", // r42/r43 bundled dictionary
     };
 
     public static File getDataPath(Context context) {

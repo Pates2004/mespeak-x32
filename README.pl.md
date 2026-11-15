@@ -2,13 +2,26 @@
 
 [English documentation](README.md)
 
-mespeak 1.44.05-r43 to silnik zamiany tekstu na mowę dla Androida. Integracja
+mespeak 1.44.05-r44 to silnik zamiany tekstu na mowę dla Androida. Integracja
 usługi, ustawień i JNI bazuje na eSpeak NG, a natywny syntezator oraz dane głosów
 pochodzą z rozwijanego klasycznego eSpeak 1.44.05, z naszym polskim słownikiem.
 
 Ta edycja obsługuje ABI `armeabi-v7a` i `x86` i używa identyfikatora `com.pates2004.mespeak.x32`.
 Druga edycja jest dostępna w [mespeak](https://github.com/Pates2004/mespeak).
 Obie mają te same funkcje i dane, a na liście aplikacji nazywają się mespeak.
+
+## Zmiany r44
+
+Poprawiono akcent polskich rzeczowników, m.in. „sataniście”, których końcówki
+były błędnie traktowane jak końcówki czasu przeszłego. Rzeczywiste błędy są
+poprawione w obu słownikach. Domyślny zachowuje staranne akcenty wyjątkowe,
+a śledzony w Git `mydict` udostępnia też opisany regularny, potoczny akcent
+czasowników. Zachowano obie dotychczasowe wersje wymowy liczb. Dane mają znacznik
+r44, aby aplikacja zainstalowała nowy domyślny słownik; zachowany świadomy import
+nadal ma pierwszeństwo. Działanie aplikacji, interfejs i algorytmy szybkości
+pozostają bez zmian.
+Jednorazowa migracja dawnych importów rozpoznaje też domyślny słownik r42/r43,
+aby go zastąpić zamiast pomylić ze słownikiem zaimportowanym przez użytkownika.
 
 ## Zmiany r43
 

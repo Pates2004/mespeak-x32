@@ -14,10 +14,18 @@ the current pronunciation fixes, with these approved differences:
   MAK-simum and MI-nimum. These are style choices, not a claim that all
   colloquial alternatives are wrong. Monika has mo-NI-ka in both versions.
 - Kolaż uses accepted KO-laż; the default retains the accepted rarer ko-LAŻ.
+- Past-tense and conditional forms use accepted colloquial penultimate stress,
+  for example zro-bi-LIŚ-my and zro-bi-li-BY-śmy. The default keeps careful
+  zro-BI-liś-my and zro-BI-li-by-śmy. Present-tense je-STEŚ-my is unchanged.
+  The reviewed clitic conjunctions abyśmy/abyście/żebyśmy/żebyście/gdybyśmy/
+  gdybyście/obyśmy/obyście also use
+  colloquial penultimate stress; careful initial stress stays in the default.
+  Longer bylebyśmy/bylebyście likewise use penultimate stress only here.
 
-Only the reviewed noun stress rules and three explicit word preferences change
-style. Verb stress rules, speed algorithms and ordinary sentence spacing remain
-unchanged. Neither dictionary recognizes meaning from context: shared written
+Only the reviewed noun/verb stress maps and three explicit word preferences change
+style (including the eight conjunction forms above). Genuine errors such as sa-TA-niście are corrected to sa-ta-NIŚ-cie in
+both versions; this noun is not a past-tense verb. Speed algorithms and ordinary
+sentence spacing remain unchanged. Neither dictionary recognizes meaning from context: shared written
 forms receive the selected style in either meaning.
 
 Installers use the default. The native runtime filename is **`pl_dict`**,
@@ -71,13 +79,19 @@ it explicitly. LF and CRLF line endings are both supported.
 
 Windows keeps canonical default sources in root `dictsource`. The script
 checks three numeric entries, three word stress preferences and the 133 noun
-rules in `careful-stress-rules.txt` (70 for i, 63 for y). The alternative
-neutralizes only their `=` stress marker, preserving vowel phonemes, inflection
+rules in `careful-stress-rules.txt` (70 for i, 63 for y), plus 54 verb/clitic rules in
+`careful-verb-stress-rules.txt`. The alternative neutralizes only their `=`
+stress marker, preserving vowel phonemes, inflection
 contexts and name exceptions. Android reconstructs the same default sources
 from this complete alternative and the explicit mapping. Both are compiled
 normally with `--compile=pl`, without binary patches or table installation.
 Future unrelated corrections must reach both versions before rebuilding.
 The script rejects an unreviewed rule count or unmatched source pair.
+
+Additional stress evidence: [WSJP: satanista](https://wsjp.pl/haslo/podglad/70884/satanista),
+[UŁ: careful and colloquial verb stress](https://www.poradnia-jezykowa.uni.lodz.pl/szczegoly/wyjatkowy-akcent-w-wyrazach-i-formach-wyrazowych-a-regionalizm),
+[UG: conditional stress](https://fil.ug.edu.pl/strona/53911/w_ktorych_wyrazach_akcentujemy_czwarta_sylabe_od_konca).
+[UŚ: conjunctions and colloquial stress, p. 68](https://sjikp.us.edu.pl/wp-content/uploads/2021/02/e-G%C5%82oski4.pdf).
 
 References: [WSJP: thirty](https://wsjp.pl/haslo/podglad/37651/trzydziesci),
 [WSJP: three hundred](https://wsjp.pl/haslo/podglad/37654/trzysta),

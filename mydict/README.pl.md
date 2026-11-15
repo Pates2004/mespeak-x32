@@ -15,10 +15,19 @@ poprawki wymowy, z następującymi uzgodnionymi różnicami:
   potocznych za błędne. Monika ma mo-NI-ka w obu wersjach.
 - Kolaż otrzymuje dopuszczalne KO-laż; domyślnie pozostaje dopuszczalne,
   rzadsze ko-LAŻ.
+- Czas przeszły i tryb przypuszczający otrzymują dopuszczalny potoczny akcent
+  przedostatni, np. zro-bi-LIŚ-my i zro-bi-li-BY-śmy. Domyślnie pozostaje
+  staranne zro-BI-liś-my i zro-BI-li-by-śmy. Teraźniejsze je-STEŚ-my nie zmienia się.
+  Omawiane spójniki abyśmy/abyście/żebyśmy/żebyście/gdybyśmy/gdybyście/obyśmy/
+  obyście także mają potoczny akcent
+  przedostatni; staranny początkowy pozostaje w słowniku domyślnym.
+  Dłuższe bylebyśmy/bylebyście także mają akcent przedostatni tylko tutaj.
 
-Zmiana stylu obejmuje wskazane reguły rzeczowników i trzy preferencje
-słów. Reguły akcentowania czasowników, algorytmy szybkości i zwykłe odstępy
-zdań pozostają bez zmian. Żaden słownik nie rozpoznaje znaczenia z kontekstu:
+Zmiana stylu obejmuje wskazane mapy rzeczowników i czasowników oraz trzy
+preferencje słów. Rzeczywiste błędy, np. sa-TA-niście, są poprawione na
+sa-ta-NIŚ-cie w obu wersjach; ten rzeczownik nie jest czasownikiem przeszłym.
+Algorytmy szybkości i zwykłe odstępy zdań pozostają bez zmian.
+Żaden słownik nie rozpoznaje znaczenia z kontekstu:
 wspólny zapis otrzyma wybrany styl niezależnie od znaczenia.
 
 Instalatory używają wersji domyślnej. Rzeczywista nazwa pliku silnika to
@@ -76,13 +85,19 @@ są zarówno końce wierszy LF, jak i CRLF.
 
 Główne źródła wersji domyślnej Windows pozostają w `dictsource`. Skrypt
 sprawdza trzy wpisy liczbowe, trzy preferencje akcentu i 133 reguły
-rzeczowników z `careful-stress-rules.txt` (70 dla i, 63 dla y). Alternatywa
+rzeczowników z `careful-stress-rules.txt` (70 dla i, 63 dla y) oraz 54 reguły
+czasowników i cząstek z `careful-verb-stress-rules.txt`. Alternatywa
 neutralizuje jedynie znacznik `=`, zachowując fonemy samogłosek, warunki odmiany
 i wyjątki imion. Na Androidzie skrypt odtwarza takie same źródła domyślne
 z pełnego wariantu alternatywnego i jawnej mapy. Oba są kompilowane zwykłym
 `--compile=pl`, bez edycji binarek i instalowania tablic. Kolejne niezwiązane
 poprawki trzeba uwzględniać w obu wersjach. Skrypt odrzuci nieuzgodnioną
 liczbę reguł lub niepasującą parę źródeł.
+
+Dodatkowe podstawy akcentowania: [WSJP: satanista](https://wsjp.pl/haslo/podglad/70884/satanista),
+[UŁ: staranny i potoczny akcent czasowników](https://www.poradnia-jezykowa.uni.lodz.pl/szczegoly/wyjatkowy-akcent-w-wyrazach-i-formach-wyrazowych-a-regionalizm),
+[UG: akcent trybu przypuszczającego](https://fil.ug.edu.pl/strona/53911/w_ktorych_wyrazach_akcentujemy_czwarta_sylabe_od_konca).
+[UŚ: spójniki i akcent potoczny, s. 68](https://sjikp.us.edu.pl/wp-content/uploads/2021/02/e-G%C5%82oski4.pdf).
 
 Źródła: [WSJP: trzydzieści](https://wsjp.pl/haslo/podglad/37651/trzydziesci),
 [WSJP: trzysta](https://wsjp.pl/haslo/podglad/37654/trzysta),

@@ -28,13 +28,13 @@
 		a	(_	a_
 	_)	arcy	(@P4t	aRtsy
 
-	@ł)	a	(by_	=a
-	@ł)	a	(bym_	=a
-	@ł)	a	(byś_	=a
+	@ł)	a	(by_	a
+	@ł)	a	(bym_	a
+	@ł)	a	(byś_	a
 
-	@)	a	(łby_	=a
-	@)	a	(łbym_	=a
-	@)	a	(łbyś_	=a
+	@)	a	(łby_	a
+	@)	a	(łbym_	a
+	@)	a	(łbyś_	a
 
 .group	 ą
 		ą		O~
@@ -111,9 +111,9 @@
 		e		E
         i)      e (_		E#
 
-	@)	e	(Cłbym_	=E
-	@)	e	(Cłbyś_	=E
-	@)	e	(Cłby_	=E
+	@)	e	(Cłbym_	E
+	@)	e	(Cłbyś_	E
+	@)	e	(Cłby_	E
 
 
 		e	(_A	E_
@@ -270,25 +270,44 @@
 	@ykl) i (L01_ i
 	@ytm) i (L01_ i
 
-		i	(łby_	=i
-		i	(łbym_	=i
-		i	(łbyś_	=i
-	@l)	i	(by_	=i
-	@n)	i	(by_	=i
-	@l)	i	(śmy_	=i
-	@n)	i	(ście_	=i
-	@l)	i	(ście_	=i
+		i	(łby_	i
+		i	(łbym_	i
+		i	(łbyś_	i
+	@l)	i	(by_	i
+	@n)	i	(by_	i
+	@l)	i	(śmy_	i
+	_powinn)	i	(śmy_	i
+	_powinn)	i	(ście_	i
+	_winn)	i	(śmy_	i
+	_winn)	i	(ście_	i
+	@l)	i	(ście_	i
 
-	@)	i	(byśmy_	=i
-	@)	i	(byście_	=i
+	// These nouns/adverbs are not past-tense forms ending in -liscie.
+	_sol)	i	(ście_	i
+	_wokal)	i	(ście_	i
+	final)	i	(ście_	i
+	_medal)	i	(ście_	i
+	_specjal)	i	(ście_	i
+	_real)	i	(ście_	i
+	_ideal)	i	(ście_	i
+	_moral)	i	(ście_	i
+	_material)	i	(ście_	i
+	_socjal)	i	(ście_	i
+	_kapital)	i	(ście_	i
+	_wiolonczel)	i	(ście_	i
+	_styl)	i	(ście_	i
+	_kol)	i	(ście_	i
 
-	@C)	ie	(libyśmy_	=;E
-	@C)	ie	(libyście_	=;E
-	@C)	ie	(liby_	=;E
+	@)	i	(byśmy_	i
+	@)	i	(byście_	i
 
-	@C)	ia	(łybyśmy_	=;a
-	@C)	ia	(łybyście_	=;a
-	@C)	ia	(łyby_	=;a
+	@C)	ie	(libyśmy_	;E
+	@C)	ie	(libyście_	;E
+	@C)	ie	(liby_	;E
+
+	@C)	ia	(łybyśmy_	;a
+	@C)	ia	(łybyście_	;a
+	@C)	ia	(łyby_	;a
 
 .group	 j
 		j		j
@@ -345,9 +364,9 @@
 
 .group	 ó
 		ó		u
-	@)	ó	(Cłbym_	=u
-	@)	ó	(Cłbyś_	=u
-	@)	ó	(Cłby_	=u
+	@)	ó	(Cłbym_	u
+	@)	ó	(Cłbyś_	u
+	@)	ó	(Cłby_	u
 
 .group	 p
 		p		p
@@ -555,9 +574,9 @@
 	_nie)	u		u
 	_prze)	u		u
 	Ce)	u	(m_	u
-	@)	u	(łbym_	=u
-	@)	u	(łbyś_	=u
-	@)	u	(łby_	=u
+	@)	u	(łbym_	u
+	@)	u	(łbyś_	u
+	@)	u	(łby_	u
 
 .group	 v
 		v		v
@@ -680,17 +699,30 @@
 	@yst) y (L01_ y
 	@zot) y (L01_ y
 
-	@ł)	y	(byśmy_	=y
-	@ł)	y	(byście_	=y
-	@ł)	y	(by_	=y
+	@ł)	y	(byśmy_	y
+	@ł)	y	(byście_	y
+	@ł)	y	(by_	y
 
-	eb)	y	(śmy_	=y
-	eb)	y	(ście_	=y
-	_ab)	y	(ście_	=y
-	_ab)	y	(śmy_	=y
-	@)	y	(łbym_	=y
-	@)	y	(łbyś_	=y
-	@)	y	(łby_	=y
+	@ł)	y	(śmy_	y
+	@ł)	y	(ście_	y
+
+	_powinn)	y	(śmy_	y
+	_powinn)	y	(ście_	y
+	_winn)	y	(śmy_	y
+	_winn)	y	(ście_	y
+
+	_gdyb)	y	(śmy_	y
+	_gdyb)	y	(ście_	y
+	_ob)	y	(śmy_	y
+	_ob)	y	(ście_	y
+
+	eb)	y	(śmy_	y
+	eb)	y	(ście_	y
+	_ab)	y	(ście_	y
+	_ab)	y	(śmy_	y
+	@)	y	(łbym_	y
+	@)	y	(łbyś_	y
+	@)	y	(łby_	y
 
 .group	 z
 		z		z

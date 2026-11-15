@@ -6,8 +6,18 @@
 
 `mespeak x32` is the 32-bit Android Text-to-Speech edition of
 [`mespeak`](https://github.com/Pates2004/mespeak), based on eSpeak
-1.44.05-r43. It keeps the same TTS service, settings, JNI integration, native
+1.44.05-r44. It keeps the same TTS service, settings, JNI integration, native
 engine and current Polish dictionary as the 64-bit edition.
+
+Release r44 corrects Polish noun stress, including `sataniście`, without treating
+noun endings as past-tense verb endings. Genuine errors are corrected in both
+dictionaries. The default retains careful exceptional stress; the tracked
+`mydict` alternative also offers the documented regular colloquial verb stress.
+The two existing number styles are preserved. Bundled data advance to r44 so
+the new default dictionary is installed; preserved explicit imports still take
+precedence. Application behavior, UI and speed algorithms are unchanged.
+One-time legacy import migration also recognizes the previous r42/r43 bundled
+dictionary, so it is replaced rather than mistaken for a user import.
 
 Release r43 preserves request cancellation through voice setup and native entry,
 stops further output after cancellation, and clears pending native resume/echo/voice
