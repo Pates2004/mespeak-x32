@@ -140,6 +140,8 @@ static atomic_int sonic_failed;
  * active_generation is owned exclusively by the serialized synthesis thread. */
 static atomic_uint cancellation_generation;
 static unsigned int active_generation;
+// Synchronous eSpeak stops its generator when a non-final callback aborts.
+static int core_stops_after_callback;
 
 static int request_canceled(void) {
   return atomic_load(&cancellation_generation) != active_generation;
@@ -203,7 +205,7 @@ static int deliver_sonic_output(JNIEnv *env, jobject object, int flush) {
 }
 
 /* Callback from espeak.  Should call back to the TTS API */
-static int SynthCallback(short *audioData, int numSamples,
+static int DeliverSynthBuffer(short *audioData, int numSamples,
                          espeak_EVENT *events) {
   JNIEnv *env = getJniEnv();
   jobject object = (jobject)events->user_data;
@@ -302,6 +304,12 @@ static int SynthCallback(short *audioData, int numSamples,
     return SYNTH_ABORT;
   }
   return SYNTH_CONTINUE;
+}
+
+static int SynthCallback(short *audioData, int numSamples, espeak_EVENT *events) {
+  const int result = DeliverSynthBuffer(audioData, numSamples, events);
+  if (audioData != NULL && result == SYNTH_ABORT) core_stops_after_callback = 1;
+  return result;
 }
 
 #ifdef __cplusplus
@@ -525,6 +533,7 @@ JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSynthesize(
     JNIEnv *env, jobject object, jstring text, jboolean isSsml, jint generation) {
   if (DEBUG) LOGV("%s", __FUNCTION__);
   active_generation = (unsigned int) generation;
+  core_stops_after_callback = 0;
   frames_delivered = 0;
   sonic_destroy_stream();
   atomic_store(&sonic_failed, 0);
@@ -555,16 +564,15 @@ JNICALL Java_com_reecedunn_espeak_SpeechSynthesis_nativeSynthesize(
   if (c_text) (*env)->ReleaseStringUTFChars(env, text, c_text);
 
   sonic_destroy_stream();
-  if (request_canceled()) {
-    AndroidResetCanceledSynthesis();
-    return REQUEST_CANCELED;
-  }
-  if (result != EE_OK || atomic_load(&sonic_failed)) {
+  const int canceled = request_canceled();
+  const int output_failed = atomic_load(&sonic_failed);
+  if (!core_stops_after_callback && (canceled || result != EE_OK || output_failed)) {
     AndroidResetCanceledSynthesis();
   }
+  if (canceled) return REQUEST_CANCELED;
 
   switch (result) {
-    case EE_OK:             return atomic_load(&sonic_failed) ? REQUEST_ERROR : REQUEST_SUCCESS;
+    case EE_OK:             return output_failed ? REQUEST_ERROR : REQUEST_SUCCESS;
     case EE_INTERNAL_ERROR: LOGE("espeak_Synth: internal error."); break;
     case EE_BUFFER_FULL:    LOGE("espeak_Synth: buffer full."); break;
     case EE_NOT_FOUND:      LOGE("espeak_Synth: not found."); break;

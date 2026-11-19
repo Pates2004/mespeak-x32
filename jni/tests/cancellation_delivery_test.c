@@ -14,6 +14,7 @@ static int audio_calls;
 static int word_calls;
 static int canceled_after_audio;
 static int canceled_after_word;
+static int canceled_at_end;
 static int synth_calls;
 static int core_callbacks;
 static int reset_calls;
@@ -80,8 +81,13 @@ espeak_ERROR espeak_Synth(const void *text, size_t size, unsigned int position,
     core_callbacks++;
     if (core_callback(input, 6615, events) == SYNTH_ABORT) {
       aborts++;
+      // Match the real synchronous generator's abort path.
+      AndroidResetCanceledSynthesis();
       return EE_OK;
     }
+  }
+  if (canceled_at_end) {
+    Java_com_reecedunn_espeak_SpeechSynthesis_nativeStop(&fake_env, user_data);
   }
   core_callback(NULL, 0, &events[1]);
   return EE_OK;
@@ -93,6 +99,7 @@ static void reset_case(float compression) {
   atomic_store(&sonic_failed, 0);
   sonic_speed = compression;
   audio_calls = word_calls = canceled_after_audio = canceled_after_word = 0;
+  canceled_at_end = 0;
   synth_calls = core_callbacks = reset_calls = aborts = accepted_bytes = 0;
   fail_get_utf = 0;
 }
@@ -164,6 +171,16 @@ int main(void) {
   CHECK(Java_com_reecedunn_espeak_SpeechSynthesis_nativeSynthesize(&fake_env, NULL,
       text, JNI_FALSE, generation) == REQUEST_CANCELED);
   CHECK(word_calls == 1 && audio_calls == 0 && core_callbacks == 1 && aborts == 1);
+  CHECK(reset_calls == 1);
+
+  reset_case(3.0f);
+  generation = (jint) active_generation;
+  canceled_at_end = 1;
+  CHECK(Java_com_reecedunn_espeak_SpeechSynthesis_nativeSynthesize(&fake_env, NULL,
+      text, JNI_FALSE, generation) == REQUEST_CANCELED);
+  // The core ignores the final notification's return code. JNI still owns
+  // this cleanup and must discard any pending Sonic audio.
+  CHECK(core_callbacks == 3 && aborts == 0 && reset_calls == 1 && sonic_stream == NULL);
 
   reset_case(1.1f);
   sonic_stream = sonicCreateStream(22050, 1);

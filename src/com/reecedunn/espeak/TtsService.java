@@ -419,18 +419,15 @@ public class TtsService extends TextToSpeechService {
     }
 
     private void synthesizeRequest(SynthesisRequest request, SynthesisCallback callback, ActiveRequest active) {
-        if (selectVoice(request) == TextToSpeech.ERROR) {
-            reportError(callback, CheckVoiceData.hasBaseResources(storageContext)
-                    ? TextToSpeech.ERROR_SERVICE : TextToSpeech.ERROR_NOT_INSTALLED_YET);
-            return;
-        }
-
         final Voice voice;
         synchronized (mAvailableVoices) {
-            voice = mMatchingVoice;
+            // Resolve the request and capture its voice as one operation.
+            // Catalog changes may affect the next request while this one runs.
+            voice = selectVoice(request) == TextToSpeech.SUCCESS ? mMatchingVoice : null;
         }
         if (voice == null) {
-            reportError(callback, TextToSpeech.ERROR_SERVICE);
+            reportError(callback, CheckVoiceData.hasBaseResources(storageContext)
+                    ? TextToSpeech.ERROR_SERVICE : TextToSpeech.ERROR_NOT_INSTALLED_YET);
             return;
         }
 

@@ -1,7 +1,9 @@
 package com.reecedunn.espeak;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.speech.tts.SynthesisCallback;
 import android.speech.tts.SynthesisRequest;
 import android.speech.tts.TextToSpeech;
@@ -14,7 +16,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.Assert.*;
 
@@ -31,15 +35,21 @@ public class CancellationLifecycleRegressionTest {
         int creations;
         boolean failFirst;
         boolean stopAfterVoice;
+        Runnable afterSelection;
+        String configuredVoice;
+        SpeechSynthesis engine;
         @Override protected int selectLanguageWithFallback(String language, String country, String variant) {
-            return onLoadVoice("pl");
+            int status = onLoadVoice("pl");
+            if (afterSelection != null) afterSelection.run();
+            return status;
         }
         @Override protected SpeechSynthesis createSpeechSynthesis(Context context,
                 SpeechSynthesis.SynthReadyCallback callback) {
             final boolean fail = failFirst && ++creations == 1;
-            return new SpeechSynthesis(context, callback) {
+            engine = new SpeechSynthesis(context, callback) {
                 @Override public boolean isReady() { return !fail && super.isReady(); }
                 @Override public boolean setVoice(Voice voice, VoiceVariant variant) {
+                    configuredVoice = voice.name;
                     boolean result = super.setVoice(voice, variant);
                     if (stopAfterVoice) {
                         stopAfterVoice = false;
@@ -48,6 +58,7 @@ public class CancellationLifecycleRegressionTest {
                     return result;
                 }
             };
+            return engine;
         }
         void say(Output output) {
             onSynthesizeText(new SynthesisRequest("Przycisk ustawienia sieci.", new Bundle()), output);
@@ -155,6 +166,52 @@ public class CancellationLifecycleRegressionTest {
         assertFalse(service.onGetVoices().isEmpty());
         assertEquals(2, service.creations);
         assertNextPhrase(service);
+    }
+
+    @Test public void catalogRefreshKeepsVoiceOfRequestAlreadySelected() throws Exception {
+        SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(storage);
+        String key = LanguageSettings.PREF_SUPPORTED_LANGUAGES;
+        Set<String> oldSelection = prefs.getStringSet(key, null);
+        assertTrue(prefs.edit().remove(key).commit());
+        Thread refresh = null;
+        try {
+            Service service = service(false);
+            Voice english = null;
+            for (Voice candidate : service.engine.getAvailableVoices()) {
+                if ("eng".equals(candidate.locale.getISO3Language())) {
+                    english = candidate;
+                    break;
+                }
+            }
+            assertNotNull("The fixture requires an English voice", english);
+            // The detached fixture reloads this preference only when the
+            // worker calls rebuildAvailableVoices below.
+            assertTrue(prefs.edit().putStringSet(key, Collections.singleton(english.toString())).commit());
+            refresh = new Thread(service::rebuildAvailableVoices, "test-catalog-refresh");
+            final Thread worker = refresh;
+            service.afterSelection = () -> {
+                worker.start();
+                long deadline = SystemClock.uptimeMillis() + 2000;
+                while (worker.isAlive() && worker.getState() != Thread.State.BLOCKED
+                        && SystemClock.uptimeMillis() < deadline) {
+                    SystemClock.sleep(1);
+                }
+                assertTrue("Refresh must reach the catalog monitor or finish",
+                        !worker.isAlive() || worker.getState() == Thread.State.BLOCKED);
+            };
+            assertNextPhrase(service);
+            worker.join(2000);
+            assertFalse(worker.isAlive());
+            assertEquals("pl", service.configuredVoice);
+            assertEquals(TextToSpeech.ERROR, service.onLoadVoice("pl"));
+            assertFalse("English voices remain available", service.onGetVoices().isEmpty());
+        } finally {
+            if (refresh != null) refresh.join(2000);
+            SharedPreferences.Editor restore = prefs.edit();
+            if (oldSelection == null) restore.remove(key);
+            else restore.putStringSet(key, oldSelection);
+            assertTrue(restore.commit());
+        }
     }
 
     @Test public void partialCancellationRecoveryMatchesReloadTimingAndAudio() throws Exception {

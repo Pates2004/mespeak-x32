@@ -333,7 +333,10 @@ public class SpeechSynthesis {
                     mCallback.onSynthDataComplete();
                 }
                 if (isRequestCanceled(generation)) {
-                    nativeResetCanceledSynthesis(generation);
+                    // If native already returned CANCELED, it either stopped
+                    // through the core callback or performed cleanup itself.
+                    // Preserve cleanup for a stop arriving as native returns.
+                    if (result != SYNTHESIS_CANCELED) nativeResetCanceledSynthesis(generation);
                     return SYNTHESIS_CANCELED;
                 }
                 completedSuccessfully = result == SYNTHESIS_SUCCESS;
