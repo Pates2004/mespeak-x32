@@ -6,8 +6,12 @@
 
 `mespeak x32` is the 32-bit Android Text-to-Speech edition of
 [`mespeak`](https://github.com/Pates2004/mespeak), based on eSpeak
-1.44.05-r45. It keeps the same TTS service, settings, JNI integration, native
+1.44.05-r46. It keeps the same TTS service, settings, JNI integration, native
 engine and current Polish dictionary as the 64-bit edition.
+
+Release r46 clears the preview connection timer as soon as the engine responds.
+The timeout still handles a connection that never responds. Bundled voice data
+stay at r44.
 
 Release r45 avoids repeating synthesis cleanup when eSpeak has already stopped
 the generator after a canceled audio callback. A request keeps its selected

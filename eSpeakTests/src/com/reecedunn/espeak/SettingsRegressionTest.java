@@ -10,6 +10,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.preference.CheckBoxPreference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
@@ -29,6 +30,7 @@ import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -395,6 +397,21 @@ public class SettingsRegressionTest {
             }
             assertTrue("Preview must finish speaking", done.get());
             screen.onActivity(activity -> {
+                PreferenceFragment fragment = (PreferenceFragment) activity.getFragmentManager()
+                        .findFragmentById(android.R.id.content);
+                android.preference.Preference preview = fragment.findPreference("speech_preview");
+                assertNotNull(preview);
+                try {
+                    Field field = preview.getClass().getDeclaredField("handler");
+                    field.setAccessible(true);
+                    Handler previewHandler = (Handler) field.get(preview);
+                    // The settings screen is still open. Its completed
+                    // preview must have no delayed initialization callback.
+                    assertFalse("Successful preview left its initialization deadline queued",
+                            previewHandler.hasMessages(0));
+                } catch (ReflectiveOperationException failure) {
+                    throw new AssertionError(failure);
+                }
                 activity.findViewById(R.id.preview_stop).performClick();
                 ((EditText) activity.findViewById(R.id.preview_text)).setText("");
                 activity.findViewById(R.id.preview_speak).performClick();

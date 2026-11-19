@@ -33,6 +33,9 @@ public final class SpeechPreviewPreference extends Preference {
     private String pendingText;
     private int status = R.string.preview_ready;
     private TextView statusView;
+    private final Runnable initializationDeadline = () -> {
+        if (!ready) fail();
+    };
 
     public SpeechPreviewPreference(Context context, String restoredText) {
         super(context);
@@ -111,6 +114,7 @@ public final class SpeechPreviewPreference extends Preference {
             };
             tts = new TextToSpeech(engineContext, result -> handler.post(() -> {
                 if (requestSession != session) return;
+                handler.removeCallbacks(initializationDeadline);
                 if (result != TextToSpeech.SUCCESS || tts == null) {
                     fail();
                     return;
@@ -128,9 +132,7 @@ public final class SpeechPreviewPreference extends Preference {
                 });
                 speakPending();
             }), getContext().getPackageName());
-            handler.postDelayed(() -> {
-                if (requestSession == session && !ready) fail();
-            }, 15000);
+            handler.postDelayed(initializationDeadline, 15000);
         } catch (RuntimeException e) {
             fail();
         }

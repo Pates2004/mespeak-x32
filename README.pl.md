@@ -2,13 +2,18 @@
 
 [English documentation](README.md)
 
-mespeak 1.44.05-r45 to silnik zamiany tekstu na mowę dla Androida. Integracja
+mespeak 1.44.05-r46 to silnik zamiany tekstu na mowę dla Androida. Integracja
 usługi, ustawień i JNI bazuje na eSpeak NG, a natywny syntezator oraz dane głosów
 pochodzą z rozwijanego klasycznego eSpeak 1.44.05, z naszym polskim słownikiem.
 
 Ta edycja obsługuje ABI `armeabi-v7a` i `x86` i używa identyfikatora `com.pates2004.mespeak.x32`.
 Druga edycja jest dostępna w [mespeak](https://github.com/Pates2004/mespeak).
 Obie mają te same funkcje i dane, a na liście aplikacji nazywają się mespeak.
+
+## Zmiany r46
+
+Podgląd mowy usuwa zaplanowany limit czasu po otrzymaniu odpowiedzi silnika.
+Jeśli silnik nie odpowie, limit nadal zadziała. Dane głosowe pozostają w wersji r44.
 
 ## Zmiany r45
 
